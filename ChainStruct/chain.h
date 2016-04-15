@@ -190,6 +190,7 @@ class Model{
 		w = new Float*[D];
 		for (Int j = 0; j < D; j++){
 			w[j] = new Float[K];
+			memset(w[j], 0, sizeof(Float)*K);
 			fin.getline(line, LINE_LEN);
 			line_str = string(line);
 			tokens = split(line_str, " ");
@@ -208,6 +209,7 @@ class Model{
 		v = new Float*[K];
 		for (Int k1 = 0; k1 < K; k1++){
 			v[k1] = new Float[K];
+			memset(v[k1], 0, sizeof(Float)*K);
 			fin.getline(line, LINE_LEN);
 			line_str = string(line);
 			tokens = split(line_str, " ");
@@ -303,6 +305,7 @@ class Model{
 			}
 			fout << endl;
 		}
+		fout.flush();
 		fout.close();
 	}
 
@@ -370,9 +373,9 @@ class Model{
 			
 			//compute accuracy
 			for(Int t=0;t<seq->T;t++){
-				assert(label_name_list == &(prob->label_name_list));
-				//if( label_name_list->at(pred[t]) == prob->label_name_list[seq->labels[t]] )
-				if( pred[t] == seq->labels[t] )
+				//assert(label_name_list == &(prob->label_name_list));
+				if( label_name_list->at(pred[t]) == prob->label_name_list[seq->labels[t]] )
+				//if( pred[t] == seq->labels[t] )
 					hit++;
 			}
 			

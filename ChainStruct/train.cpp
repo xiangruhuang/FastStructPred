@@ -126,7 +126,8 @@ int main(int argc, char** argv){
 	} else {
 		BCFWsolve* solver = new BCFWsolve(param);
 		Model* model = solver->solve();
-		//cerr << "Acc=" << model->calcAcc_Viterbi(param->prob) << endl;
+		cerr << "Acc=" << model->calcAcc_Viterbi(param->prob) << endl;
+		model->writeModel(param->modelFname);
 	}
 	
 	overall_time += get_current_time();

@@ -4,14 +4,14 @@ all:
 	g++ $(FLAG) -o train train.cpp
 
 s=1
-m=1000
+m=10
 q=1
 e=3
 a=0.1
 opt=
 c=1
 t=0.1
-scale=train
+scale=test
 
 pos:
 	$(eval train_file := /scratch/cluster/ianyen/data/POS/wsj.pos.crf.$(scale))
