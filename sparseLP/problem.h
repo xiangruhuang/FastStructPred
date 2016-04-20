@@ -102,9 +102,14 @@ class Param{
 	char* modelFname;
 	int solver;
 	Problem* prob;
+	int max_iter;
+	Float eta, rho;
 
 	Param(){
 		solver = 0;
+		max_iter = 100;
+		eta = 1;
+		rho = 1;
 		testFname = NULL;
 		modelFname = NULL;
 		prob = NULL;

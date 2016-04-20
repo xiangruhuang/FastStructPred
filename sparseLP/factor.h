@@ -19,11 +19,13 @@ class uni_factor{
 	bool* inside;
 	Float rho, eta;
 
-	uni_factor(int _K, SparseVec* _feature, Float** _w){
+	uni_factor(int _K, SparseVec* _feature, Float** _w, Param* param){
 		K = _K;
 		alpha = new Float[K];
 		feature = _feature;
 		w = _w;
+		rho = param->rho;
+		eta = param->eta;
 
 		//compute score vector
 		c = new Float[K];
@@ -56,7 +58,6 @@ class uni_factor{
 		delete[] y;
 		delete[] grad;
 		delete[] inside;
-		edges.clear();
 		act_set.clear();
 		msgs.clear();
 	}
@@ -83,8 +84,8 @@ class uni_factor{
 			}
 		}
 		if (max_index != -1){
-			act_set.push_back(k);
-			inside[k] = true;
+			act_set.push_back(max_index);
+			inside[max_index] = true;
 		}
 	}
 
@@ -112,7 +113,7 @@ class uni_factor{
 			Float* msg = *m;
 			for (int k = 0; k < K; k++){
 				Float delta_y = y_new[k] - y[k];
-				msg[k] += delta_y;
+				msg[k] -= delta_y; // since msg = M Y - y
 			}
 		}
 		for (int k = 0; k < K; k++)
@@ -145,13 +146,19 @@ class bi_factor{
 	Float* sumcol; // sumcol[k] = sum(y[:][k])
 	Float* sumrow; // sumrow[k] = sum(y[k][:])
 	Float** v; // v_{k_1, k_2} = v[k_1][k_2], k_1 for l, k_2 for r
-	Float** y; // relaxed prediction matrix (vector)
+	Float* y; // relaxed prediction matrix (vector)
+	Float* grad;
+	vector<int> act_set;
+	Float rho, eta;
 
-	bi_factor(int _K, uni_factor* _l, uni_factor* _r, Float** _v){
+	bi_factor(int _K, uni_factor* _l, uni_factor* _r, Float** _v, Param* param){
 		K = _K;
 		l = _l;
 		r = _r;
 		v = _v;
+		rho = param->rho;
+		eta = param->eta;
+
 		beta = new Float*[K];
 		for (int k = 0; k < K; k++)
 			beta[k] = new Float[K];
@@ -167,11 +174,13 @@ class bi_factor{
 		memset(sumcol, 0.0, sizeof(Float)*K);
 		memset(sumrow, 0.0, sizeof(Float)*K);
 		
-		y = new Float*[K];
-		for (int k = 0; k < K; k++){
-			y[k] = new Float[K];
-			memset(y[k], 0.0, sizeof(Float)*K);
-		}
+		y = new Float[K*K];
+		memset(y, 0.0, sizeof(Float)*K*K);
+		
+		//cache
+		grad = new Float[K*K];
+		memset(grad, 0.0, sizeof(Float)*K*K);
+		act_set.clear();
 	}
 
 	~bi_factor(){
@@ -180,23 +189,84 @@ class bi_factor{
 		}
 		delete[] beta;
 
-		for (int k = 0; k < K; k++){
-			delete[] y[k];
-		}
 		delete[] y;
 		
 		delete[] msgl;
 		delete[] msgr;
 		delete[] sumcol;
 		delete[] sumrow;
+		delete[] grad;
+		act_set.clear();
 	}
 	
 	void search(){
 		
+		//compute gradient
+	
+		//find argmax
+		Float gmax = -1e300;
+		int max_index = -1;
+		for (Int k1k2 = 0; k1k2 < K * K; k1k2++){
+			if (grad[k1k2] > gmax){
+				
+			}
+		}
+		if (max_index != -1){
+			act_set.push_back(max_index);
+		}
 	}
 
+	//       min_Y  <Y, v> + \rho/2 ( \| msgl \|_2^2 + \| msgr \|_2^2 )
+	// <===> min_Y  \sum_{(k_1, k_2)} [ A/2 Y^2_{(k_1, k_2)} + B_{(k_1, k_2)} Y_{(k_1, k_2)} ]
+	//        s.t. 	A = 2 * \rho
+	// 		B_{(k_1, k_2)} = 2 * (msgl[k_1] + msgr[k_2] - Y_{(k_1, k_2)})
+	// 		0 <= Y <= 1
 	void subsolve(){
+		Float A = 2 * rho;
+		//compute gradient
+		
+		//for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+		//	int k1k2 = *it;
+		for (int k1k2 = 0; k1k2 < K * K; k1k2++){
+			int k1 = k1k2 / K;
+			int k2 = k1k2 % K;
+			grad[k1k2] = v[k1][k2] + rho * (msgl[k1] + msgr[k2]);
+		}
 
+		//compute Dk
+		Float* Dk = new Float[K*K];
+		for (int k1k2 = 0; k1k2 < K * K; k1k2++){
+			Dk[k1k2] = grad[k1k2] + A * 1;
+		}
+
+		sort(Dk, Dk + K*K, greater<Float>() );
+
+		Float b = Dk[0] - A*1;
+		Int r;
+		for( r=1; r<K*K && b<r*Dk[r]; r++)
+			b += Dk[r];
+		b = b / r;
+		
+		Float* y_new = new Float[K*K];
+		//record alpha new values
+		for(Int k1k2=0;k1k2<K*K;k1k2++){
+			assert(false /* not implemented yet */);
+			y_new[k1k2] = 0; // TODO //min( (Float)((k1k2!=yi_yj)?0.0:1.0), (b-grad[k1k2])/A );
+		}
+		//update y_new
+		for (int k1k2 = 0; k1k2 < K * K; k1k2++){
+			Float delta_y = y_new[k1k2] - y[k1k2];
+			int k1 = k1k2 / K, k2 = k1k2 % K;
+			msgl[k1] += delta_y; sumrow[k1] += delta_y;
+			msgr[k2] += delta_y; sumcol[k2] += delta_y;
+		}
+		
+		for(Int k1k2=0;k1k2<K*K;k1k2++){
+			y[k1k2] = y_new[k1k2];
+		}
+		
+		delete[] y_new;
+		delete[] Dk;
 	}
 	
 	//     \mu^{t+1} - \mu^t
@@ -207,16 +277,18 @@ class bi_factor{
 		Float* y_l = l->y;
 		Float* y_r = r->y;
 		for (int k = 0; k < K; k++){
-			msgl[k] += eta * (sumrow[k] - y_l[k])
-			msgr[k] += eta * (sumcol[k] - y_r[k])
+			msgl[k] += eta * (sumrow[k] - y_l[k]);
+			msgr[k] += eta * (sumcol[k] - y_r[k]);
 		}
 	}
 
 	Float score(){
 		Float score = 0.0;
 		for (int k1 = 0; k1 < K; k1++){
+			int k1K = k1*K;
+			Float* v_k1 = v[k1];
 			for (int k2 = 0; k2 < K; k2++){
-				score += v[k1][k2]*y[k1][k2];
+				score += v_k1[k2]*y[k1K+k2];
 			}
 		}
 		return score;

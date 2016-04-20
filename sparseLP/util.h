@@ -200,8 +200,10 @@ Int argmax( Float* arr, Int size ){
 // min_{y \in simplex} \| y - b\|_2^2
 inline void solve_simplex(int n, Float* y, Float* b){
 	int* index = new int[n];
+	for (int i = 0; i < n; i++)
+		index[i] = i;
 	memset(y, 0.0, sizeof(Float)*n);
-	sort(index, index+n, new ScoreComp(b));
+	sort(index, index+n, ScoreComp(b));
 	Float sum = 0.0;
 	for (int i = 0; i < n; i++){
 		sum += b[i];
