@@ -11,6 +11,8 @@ void exit_with_help(){
 	cerr << "-s solver: (default 0)" << endl;
 	cerr << "	0 -- Viterbi(chain)" << endl;
 	cerr << "	1 -- sparseLP" << endl;
+	cerr << "-e eta: GDMM step size" << endl;
+	cerr << "-o rho: coefficient/weight of message" << endl;
 	exit(0);
 }
 
@@ -26,6 +28,10 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 		switch(argv[i-1][1]){
 			
 			case 's': param->solver = atoi(argv[i]);
+				  break;
+			case 'e': param->eta = atof(argv[i]);
+				  break;
+			case 'o': param->rho = atof(argv[i]);
 				  break;
 			default:
 				  cerr << "unknown option: -" << argv[i-1][1] << endl;
@@ -51,6 +57,7 @@ void construct_factor(Problem* prob, Model* model, Param* param, vector<uni_fact
 	nodes.clear();
 	edges.clear();
 	int node_count = 0;
+	int n = prob->data.size();
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
 		Instance* ins = *it_ins;
 		//for this instance
@@ -72,7 +79,7 @@ void construct_factor(Problem* prob, Model* model, Param* param, vector<uni_fact
 			edges.push_back(edge);
 		}
 	}
-	
+	assert(n + edges.size() == nodes.size());
 }
 
 Float compute_acc(Problem* prob, Model* model, vector<uni_factor*> nodes){
@@ -120,13 +127,15 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 	int iter = 0;
 	int max_iter = param->max_iter;
 	while (iter < max_iter){
+		Float score = 0.0;
 		for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
 			uni_factor* node = *it_node;
 			node->search();
 			node->subsolve();
+			score += node->score();
 		}
 		
-		for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
+		/*for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 			bi_factor* edge = *it_edge;
 			edge->search();
 			edge->subsolve();
@@ -135,9 +144,13 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 		for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 			bi_factor* edge = *it_edge;
 			edge->update_multipliers();
-		}
+		}*/
+		cerr << "iter=" << iter 
+		<< ", acc=" << compute_acc(prob, model, nodes) 
+		<< ", score=" << score 
+		<< endl;
+		
 		iter++;
-		cerr << "iter=" << iter << ", acc=" << compute_acc(prob, model, nodes) << endl;
 	}
 
 }
@@ -146,7 +159,14 @@ int main(int argc, char** argv){
 	if (argc < 2){
 		exit_with_help();
 	}
-	
+
+/*	Float* y = new Float[3]; 
+	Float* b = new Float[3]; b[0] = 0; b[1] = 0; b[2] = 0;
+	solve_simplex(3, y, b);
+	for (int i = 0; i < 3; i++)
+		cerr << y[i] << endl;
+	exit(0);
+*/	
 	Param* param = new Param();
 	parse_cmd_line(argc, argv, param);
 	Model* model = new Model(param->modelFname);
@@ -158,6 +178,7 @@ int main(int argc, char** argv){
 	cerr << "prob.D=" << prob->D << endl;
 	cerr << "prob.K=" << prob->K << endl;
 	cerr << "prob.N=" << prob->data.size() << endl;
+	cerr << "param.rho=" << param->rho << endl;
 
 	if (param->solver == 0){
 		ChainProblem* chain = new ChainProblem(param->testFname);

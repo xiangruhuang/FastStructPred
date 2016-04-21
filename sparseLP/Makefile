@@ -11,13 +11,15 @@ a=0.1
 opt=
 c=1
 t=0.1
-scale=test
+scale=tmp
+rho=1.0
+eta=1.0
 
 pos:
 	$(eval test_file := /scratch/cluster/ianyen/data/POS/wsj.pos.crf.$(scale))
+	#$(eval test_file := pos.tmp)
 	$(eval model := model)
-	
-	./predict -s $(s) $(test_file) $(model) 
+	./predict -s $(s) -o $(rho) -e $(eta) $(test_file) $(model) 
 
 speech:
 	$(eval train_file := /scratch/cluster/ianyen/data/speech/speech.$(scale))

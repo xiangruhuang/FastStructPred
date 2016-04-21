@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <time.h>
 #include <queue>
+#include <algorithm>
+#include <iomanip>
 using namespace std;
 
 typedef float Float;
@@ -197,36 +199,47 @@ Int argmax( Float* arr, Int size ){
 	return kmax;
 }
 
-// min_{y \in simplex} \| y - b\|_2^2
+// min_{\|y\|_1 = 1 and y >= 0} \| y - b\|_2^2
 inline void solve_simplex(int n, Float* y, Float* b){
 	int* index = new int[n];
 	for (int i = 0; i < n; i++)
 		index[i] = i;
 	memset(y, 0.0, sizeof(Float)*n);
 	sort(index, index+n, ScoreComp(b));
-	Float sum = 0.0;
+	double sum = 0.0;
 	for (int i = 0; i < n; i++){
 		sum += b[i];
 	}
+	/*cerr << "b: ";
+	for (int  i = 0; i < n; i++){
+		cerr << b[i] << " ";
+	}
+	cerr << endl;
+	*/
 	for (int i = n-1; i >= 0; i--){
-		if (b[index[i]] <= 0){
-			//y[index[i]] = 0;
-			continue;
-		} else {
-			Float t = 0.0;
-			if (sum > 1){
-				t = (sum - 1)/(i+1);
+		double t = (sum - 1.0)/(i+1);
+		if (/*b[index[i]] >= 0 && */b[index[i]] >= t){
+			//feasible
+			
+			//if (sum <= 1)
+			//	t = 0.0;
+			//cerr << setprecision(10) << "t= " << t << ", sum=" << sum << ", b[index[i]]=" << b[index[i]] << ", i=" << i << endl;
+			for (int j = 0; j < n; j++){
+				y[index[j]] = b[index[j]] - t;
+				if (y[index[j]] < 0.0)
+					y[index[j]] = 0;
 			}
-			if (b[index[i]] >= t){
-				//feasible
-				for (int j = 0; j <= i; j++){
-					y[index[j]] = b[index[j]] - t;
-				}
-				break;
-			}
+			break;
 		}
 		sum -= b[index[i]];
 	}
+	/*
+	cerr << "y: ";
+	for (int  i = 0; i < n; i++){
+		cerr << y[i] << " ";
+	}
+	cerr << endl;
+	*/
 	delete[] index;
 }
 

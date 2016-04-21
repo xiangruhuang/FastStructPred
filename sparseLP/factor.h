@@ -6,24 +6,22 @@
 //unigram factor, follows simplex constraints
 class uni_factor{
 	public:
-	Float* alpha;
+	//fixed
 	int K;
-	int m;
-	vector<Float*> msgs;
-	SparseVec* feature;
-	Float** w; // w_k = w[:][k]
-	Float* c; // c[k] = <w_k, x>
+	Float rho, eta;
+	Float* c; // c[k] = -<w_k, x>
+	
+	//maintained
 	Float* grad;
 	Float* y;
-	vector<int> act_set;
 	bool* inside;
-	Float rho, eta;
+	vector<Float*> msgs;
+	vector<int> act_set;
 
-	uni_factor(int _K, SparseVec* _feature, Float** _w, Param* param){
+	uni_factor(int _K, SparseVec* feature, Float** w, Param* param){
 		K = _K;
-		alpha = new Float[K];
-		feature = _feature;
-		w = _w;
+		//feature = _feature;
+		//w = _w;
 		rho = param->rho;
 		eta = param->eta;
 
@@ -50,10 +48,15 @@ class uni_factor{
 		memset(inside, false, sizeof(bool)*K);
 		act_set.clear();
 		msgs.clear();
+
+		//temporary
+		for (int k = 0; k < K; k++){
+			act_set.push_back(k);
+			inside[k] = true;
+		}
 	}
 
 	~uni_factor(){
-		delete[] alpha;
 		delete[] c;
 		delete[] y;
 		delete[] grad;
@@ -89,10 +92,27 @@ class uni_factor{
 		}
 	}
 
+
+	//	min_{y \in simplex} <c, y> + \rho/2 \sum_{msg \in msgs} \| (msg + y) - y \|_2^2
+	// <===>min_{y \in simplex} \| y - 1/|msgs| ( \sum_{msg \in msgs} (msg + y) - 1/\rho c ) \|_2^2
+	// <===>min_{y \in simplex} \| y - b \|_2^2	
+	// no shrinking now
 	void subsolve(){
-		//	min_{y \in simplex} <c, y> + \rho/2 \sum_{msg \in msgs} \| (msg + y) - y \|_2^2
-		// <===>min_{y \in simplex} \| y - 1/|msgs| ( \sum_{msg \in msgs} (msg + y) - 1/\rho c ) \|_2^2
-		// <===>min_{y \in simplex} \| y - b \|_2^2
+		if (msgs.size() == 0){
+			//min_y <c, y>
+			Float cmin = 1e300;
+			int min_index = -1;
+			for (int k = 0; k < K; k++){
+				if (c[k] < cmin){
+					cmin = c[k];
+					min_index = k;
+				}
+			}
+			assert(min_index != -1 && "smallest coordinate should exist");
+			memset(y, 0.0, sizeof(Float)*K);
+			y[min_index] = 1.0;
+			return;
+		}
 		Float* b = new Float[K];
 		Float* y_new = new Float[K];
 		memset(b, 0.0, sizeof(Float)*K);
@@ -113,21 +133,24 @@ class uni_factor{
 			Float* msg = *m;
 			for (int k = 0; k < K; k++){
 				Float delta_y = y_new[k] - y[k];
-				msg[k] -= delta_y; // since msg = M Y - y
+				msg[k] -= delta_y; // since msg = M Y - y + \mu
 			}
 		}
-		for (int k = 0; k < K; k++)
+		for (int k = 0; k < K; k++){
+			assert(!isnan(y_new[k]) && "y_new[k] not a number?");
 			y[k] = y_new[k];
+		}
 		
 		delete[] y_new;
 		delete[] b;
 	}
 
-
 	//goal: minimize score
 	Float score(){
 		Float score = 0.0;
 		for (int k = 0; k < K; k++){
+			assert(!isnan(c[k]) /* c[k] not a number */);
+			assert(!isnan(y[k]) /* y[k] not a number */);
 			score += c[k]*y[k];
 		}
 		return score;

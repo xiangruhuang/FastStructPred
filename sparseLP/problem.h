@@ -108,8 +108,8 @@ class Param{
 	Param(){
 		solver = 0;
 		max_iter = 100;
-		eta = 1;
-		rho = 1;
+		eta = 1.0;
+		rho = 1.0;
 		testFname = NULL;
 		modelFname = NULL;
 		prob = NULL;
