@@ -19,7 +19,7 @@ class uni_factor{
 	vector<Float*> msgs;
 	vector<int> act_set;
 
-	uni_factor(int _K, SparseVec* feature, Float** w, Param* param){
+	inline uni_factor(int _K, SparseVec* feature, Float** w, Param* param){
 		K = _K;
 		//feature = _feature;
 		//w = _w;
@@ -246,7 +246,7 @@ class bi_factor{
 	vector<int> act_set;
 	bool* inside;
 
-	bi_factor(int _K, uni_factor* _l, uni_factor* _r, Float** _v, Param* param){
+	inline bi_factor(int _K, uni_factor* _l, uni_factor* _r, Float** _v, Param* param){
 		K = _K;
 		l = _l;
 		r = _r;

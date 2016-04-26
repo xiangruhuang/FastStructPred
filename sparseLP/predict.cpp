@@ -55,7 +55,7 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 	}
 }
 
-void construct_factor(Instance* ins, Model* model, Param* param, vector<uni_factor*>& nodes, vector<bi_factor*>& edges){
+inline void construct_factor(Instance* ins, Model* model, Param* param, vector<uni_factor*>& nodes, vector<bi_factor*>& edges){
 	//construct uni_factors
 	nodes.clear();
 	edges.clear();
@@ -85,7 +85,7 @@ void construct_factor(Instance* ins, Model* model, Param* param, vector<uni_fact
 	//assert(n + edges.size() == nodes.size());
 }
 
-Float compute_acc(Problem* prob, Instance* ins, Model* model, vector<uni_factor*> nodes){
+inline Float compute_acc(Problem* prob, Instance* ins, Model* model, vector<uni_factor*> nodes){
 
 	int node_count = 0;
 	int hit = 0;
@@ -123,9 +123,17 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 	vector<bi_factor*> edges;
 	Float hit = 0.0;
 	Float N = 0.0;
+	double uni_search_time = 0.0;
+	double uni_subsolve_time = 0.0;
+	double bi_search_time = 0.0;
+	double bi_subsolve_time = 0.0;
+	double maintain_time = 0.0;
+	double construct_time = 0.0;
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
 		Instance* ins = *it_ins;
+		construct_time -= omp_get_wtime();
 		construct_factor(ins, model, param, nodes, edges);
+		construct_time += omp_get_wtime();
 		int iter = 0;
 		int max_iter = param->max_iter;
 		Float score = 0.0;
@@ -137,8 +145,15 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 			val = 0.0;
 			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
 				uni_factor* node = *it_node;
+
+				uni_search_time -= omp_get_wtime();
 				node->search();
+				uni_search_time += omp_get_wtime();
+
+				uni_subsolve_time -= omp_get_wtime();
 				node->subsolve();
+				uni_subsolve_time += omp_get_wtime();
+
 				score += node->score();
 				val += node->func_val();
 				//node->display();
@@ -146,8 +161,15 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
+
+				bi_search_time -= omp_get_wtime();
 				edge->search();
+				bi_search_time += omp_get_wtime();
+
+				bi_subsolve_time -= omp_get_wtime();
 				edge->subsolve();
+				bi_subsolve_time += omp_get_wtime();
+
 				score += edge->score();
 				val += edge->func_val();
 				p_inf += edge->infea();
@@ -156,7 +178,9 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
+				maintain_time -= omp_get_wtime();
 				edge->update_multipliers();
+				maintain_time += omp_get_wtime();
 			}
 
 			if (p_inf < 1e-6)
@@ -175,8 +199,14 @@ void struct_predict(Problem* prob, Model* model, Param* param){
 		hit += acc*ins->T;
 		N += ins->T;
 		//cerr << "_Acc=" << hit/N << endl;
-	}	
-	cerr << "Acc=" << hit/N << endl;
+	}
+	cerr << "uni_search=" << uni_search_time
+		<< ", uni_subsolve=" << uni_subsolve_time
+		<< ", bi_search=" << bi_search_time
+		<< ", bi_subsolve=" << bi_subsolve_time 
+		<< ", maintain=" << maintain_time 
+		<< ", construct=" << construct_time 
+		<< ", Acc=" << hit/N << endl;
 }
 
 int main(int argc, char** argv){
