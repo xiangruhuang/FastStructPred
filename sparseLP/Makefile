@@ -20,6 +20,11 @@ pos:
 	$(eval model := model)
 	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 
+tmp:
+	$(eval test_file := pos.tmp)
+	$(eval model := model)
+	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
+
 speech:
 	$(eval train_file := /scratch/cluster/ianyen/data/speech/speech.$(scale))
 	$(eval heldout_file := /scratch/cluster/ianyen/data/speech/speech.tmp)

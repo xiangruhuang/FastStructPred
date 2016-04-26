@@ -1,7 +1,7 @@
 //prediction
 
 #include "util.h"
-#include "model.h"
+//#include "model.h"
 
 //unigram factor, follows simplex constraints
 class uni_factor{
@@ -19,23 +19,12 @@ class uni_factor{
 	vector<Float*> msgs;
 	vector<int> act_set;
 
-	inline uni_factor(int _K, SparseVec* feature, Float** w, Param* param){
+	inline uni_factor(int _K, Float* _c, Param* param){
 		K = _K;
-		//feature = _feature;
-		//w = _w;
 		rho = param->rho;
-		//eta = param->eta;
 
 		//compute score vector
-		c = new Float[K];
-		memset(c, 0.0, sizeof(Float)*K);
-		for (SparseVec::iterator it = feature->begin(); it != feature->end(); it++){
-			Float* wj = w[it->first];
-			Float x_j = it->second;
-			for (int k = 0; k < K; k++){
-				c[k] -= wj[k] * x_j;
-			}
-		}
+		c = _c;
 
 		//cache of gradient
 		grad = new Float[K];
@@ -55,7 +44,6 @@ class uni_factor{
 	}
 
 	~uni_factor(){
-		delete[] c;
 		delete[] y;
 		delete[] grad;
 		delete[] inside;
@@ -176,7 +164,8 @@ class uni_factor{
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 			int k = *it;
 			y[k] = y_new[act_count];
-			if (y[k] > 1e-12 || grad[k] < 0.0){
+			//shrink
+			if (y[k] > 1e-12){
 				next_act_set.push_back(k);
 			} else {
 				inside[k] = false;
@@ -230,7 +219,7 @@ class uni_factor{
 class bi_factor{
 	public:
 	//fixed
-	int K;
+	int K1, K2; //number of possible labels of node l,r, resp.
 	Float rho, eta;
 	uni_factor* l;
 	uni_factor* r;
@@ -242,40 +231,38 @@ class bi_factor{
 	Float* sumcol; // sumcol[k] = sum(y[:][k])
 	Float* sumrow; // sumrow[k] = sum(y[k][:])
 	Float* y; // relaxed prediction matrix (vector)
-	Float* grad;
+	//Float* grad;
 	vector<int> act_set;
 	bool* inside;
 
-	inline bi_factor(int _K, uni_factor* _l, uni_factor* _r, Float** _v, Param* param){
-		K = _K;
+	inline bi_factor(uni_factor* _l, uni_factor* _r, Float* _c, Param* param){
 		l = _l;
 		r = _r;
+		K1 = l->K;
+		K2 = r->K;
 		rho = param->rho;
 		eta = param->eta;
 
-		msgl = new Float[K];
-		memset(msgl, 0.0, sizeof(Float)*K);
-		msgr = new Float[K];
-		memset(msgr, 0.0, sizeof(Float)*K);
+		msgl = new Float[K1];
+		memset(msgl, 0.0, sizeof(Float)*K1);
+		msgr = new Float[K2];
+		memset(msgr, 0.0, sizeof(Float)*K2);
 		l->msgs.push_back(msgl);
 		r->msgs.push_back(msgr);
-		sumcol = new Float[K];
-		sumrow = new Float[K];
-		memset(sumcol, 0.0, sizeof(Float)*K);
-		memset(sumrow, 0.0, sizeof(Float)*K);
-		c = new Float[K*K];
-		for (int k1k2 = 0; k1k2 < K*K; k1k2++){
-			c[k1k2] = -(_v[k1k2/K][k1k2%K]);
-		}
+		sumrow = new Float[K1];
+		memset(sumrow, 0.0, sizeof(Float)*K1);
+		sumcol = new Float[K2];
+		memset(sumcol, 0.0, sizeof(Float)*K2);
+		c = _c;
 		
-		y = new Float[K*K];
-		memset(y, 0.0, sizeof(Float)*K*K);
+		y = new Float[K1*K2];
+		memset(y, 0.0, sizeof(Float)*K1*K2);
 		
 		//cache
-		grad = new Float[K*K];
-		memset(grad, 0.0, sizeof(Float)*K*K);
-		inside = new bool[K*K];
-		memset(inside, false, sizeof(bool)*K*K);
+		//grad = new Float[K1*K2];
+		//memset(grad, 0.0, sizeof(Float)*K1*K2);
+		inside = new bool[K1*K2];
+		memset(inside, false, sizeof(bool)*K1*K2);
 		act_set.clear();
 
 		//temporary
@@ -290,28 +277,28 @@ class bi_factor{
 		delete[] msgr;
 		delete[] sumcol;
 		delete[] sumrow;
-		delete[] grad;
+		//delete[] grad;
 		delete[] inside;
 		act_set.clear();
 	}
 	
 	void fill_act_set(){
 		act_set.clear();
-		for (int kk = 0; kk < K*K; kk++){
+		for (int kk = 0; kk < K1*K2; kk++){
 			act_set.push_back(kk);
 			inside[kk] = true;
 		}
 	}
 	
-	inline void search(){
+	inline void naive_search(){
 		//compute gradient
 	
 		//find argmax
 		Float gmax = 0.0;
 		int max_index = -1;
-		for (Int k1k2 = 0; k1k2 < K * K; k1k2++){
+		for (Int k1k2 = 0; k1k2 < K1 * K2; k1k2++){
 			if (inside[k1k2]) continue;
-			int k1=k1k2/K, k2 = k1k2%K;
+			int k1=k1k2/K2, k2 = k1k2%K2;
 			Float g = c[k1k2] + rho * (msgl[k1] + msgr[k2]);
 			if (-g > gmax){
 				gmax = -g;
@@ -326,6 +313,11 @@ class bi_factor{
 		}
 	}
 
+	inline void search(){
+		//find argmax
+		naive_search();
+	}
+
 	//       min_Y  <Y, -v> + \rho/2 ( \| msgl \|_2^2 + \| msgr \|_2^2 )
 	// <===> min_Y  A/2 \|Y\|_2^2 + <B,  Y>
 	// <===> min_Y \| Y - (-B/A) \|_2^2 
@@ -334,22 +326,24 @@ class bi_factor{
 	// 		0 <= Y <= 1
 	//	Let C := -B/A
 	inline void subsolve(){
-		int* sl = new int[K];
-		int* sr = new int[K];
-		memset(sl, 0, sizeof(int)*K);
-		memset(sr, 0, sizeof(int)*K);
+		/*
+		int* sl = new int[K1];
+		int* sr = new int[K2];
+		memset(sl, 0, sizeof(int)*K1);
+		memset(sr, 0, sizeof(int)*K2);
 		int max_sl = 0, max_sr = 0;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
 			int k1k2 = *it;
-			int k1 = k1k2 / K, k2 = k1k2 % K;
+			int k1 = k1k2 / K2, k2 = k1k2 % K2;
 			sl[k1]++; sr[k2]++;
 			if (max_sl < sl[k1])
 				max_sl = sl[k1];
 			if (max_sr < sr[k2])
 				max_sr = sr[k2];
 		}
+		*/
 		
-		Float A = rho * 2 * K; //(l->act_set.size() + r->act_set.size());
+		Float A = rho * (K1 + K2); //(l->act_set.size() + r->act_set.size());
 		Float* y_new = new Float[act_set.size()];
 
 		int act_count = 0;
@@ -375,8 +369,8 @@ class bi_factor{
 			act_count = 0;
 			for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 				int k1k2 = *it;
-				int k1 = k1k2 / K;
-				int k2 = k1k2 % K;
+				int k1 = k1k2 / K2;
+				int k2 = k1k2 % K2;
 				C[act_count] = -(c[k1k2] + rho * (msgl[k1] + msgr[k2] - sumrow[k1] - sumcol[k2]) - A*y[k1k2])/A; // C = -B/A
 			}
 			//cerr << "before subsolve, val=" << func_val() << endl;
@@ -401,7 +395,7 @@ class bi_factor{
 				y_new[act_count] = 0.0;
 			}
 			Float delta_y = y_new[act_count] - y[k1k2];
-			int k1 = k1k2 / K, k2 = k1k2 % K;
+			int k1 = k1k2 / K2, k2 = k1k2 % K2;
 			msgl[k1] += delta_y; sumrow[k1] += delta_y;
 			msgr[k2] += delta_y; sumcol[k2] += delta_y;
 		}
@@ -450,12 +444,11 @@ class bi_factor{
 		//update msgl, msgr
 		Float* y_l = l->y;
 		Float* y_r = r->y;
-		for (int k = 0; k < K; k++){
+		for (int k = 0; k < K1; k++){
 			msgl[k] += eta * (sumrow[k] - y_l[k]);
+		}
+		for (int k = 0; k < K2; k++){
 			msgr[k] += eta * (sumcol[k] - y_r[k]);
-			if (fabs(msgr[k]) > 1e-12){
-				//cerr << "k=" << k << ", msgr[k]=" << msgr[k] << endl;
-			}
 		}
 	}
 
@@ -471,11 +464,13 @@ class bi_factor{
 	// F = c^T Y + \rho/2 (\|msgl \|^2 + \|msgr\|^2_2)
 	Float func_val(){
 		Float val = 0.0;
-		for (int k = 0; k < K*K; k++){
+		for (int k = 0; k < K1*K2; k++){
 			val += c[k]*y[k];
 		}
-		for (int k = 0; k < K; k++){
+		for (int k = 0; k < K1; k++){
 			val += rho/2 * msgl[k] * msgl[k];
+		}
+		for (int k = 0; k < K2; k++){
 			val += rho/2 * msgr[k] * msgr[k];
 		}
 		return val;
@@ -485,8 +480,10 @@ class bi_factor{
 		Float p_inf = 0;
 		Float* y_l = l->y;
 		Float* y_r = r->y;
-		for (int k = 0; k < K; k++){
+		for (int k = 0; k < K1; k++){
 			p_inf += fabs(sumrow[k] - y_l[k]);
+		}
+		for (int k = 0; k < K2; k++){
 			p_inf += fabs(sumcol[k] - y_r[k]);
 		}
 		return p_inf;
@@ -502,8 +499,8 @@ class bi_factor{
 		cerr << endl;*/
 		//cerr << "norm(c, 2)=" << norm_sq(c, K*K) << endl;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-			int k = *it;
-			cerr << "(" << (k/K) << "," << (k%K) << ")" << ":" << y[k] << " ";
+			int kk = *it;
+			cerr << "(" << (kk/K2) << "," << (kk%K2) << ")" << ":" << y[kk] << " ";
 		}
 		cerr << endl;
 	}

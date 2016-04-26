@@ -1,0 +1,30 @@
+./predict -s 1 -o 1 -e 1 -m 10000 /scratch/cluster/ianyen/data/POS/wsj.pos.crf.tmp model 
+D=47124
+K=45
+prob.D=47081
+prob.K=35
+prob.N=20
+param.rho=1
+param.eta=1
+iter=472, acc=0.925926, score=-23.986, val=13.2271, infea=1.94137e-14
+iter=440, acc=0.884058, score=-67.512, val=-21.2926, infea=2.12139e-14
+iter=461, acc=0.827586, score=-28.4097, val=-25.6839, infea=5.55502e-15
+iter=326, acc=0.909091, score=-22.0929, val=-8.80494, infea=4.21885e-15
+iter=679, acc=0.839286, score=-51.8228, val=-19.3043, infea=1.77048e-14
+iter=415, acc=0.892857, score=-28.0629, val=-17.159, infea=5.10703e-15
+iter=438, acc=0.926829, score=-41.922, val=-30.5986, infea=7.10543e-15
+iter=737, acc=0.84127, score=-56.6179, val=9.85303, infea=2.90458e-14
+iter=320, acc=0.964286, score=-28.5633, val=-11.6557, infea=4.32987e-15
+iter=468, acc=0.894737, score=-37.2655, val=-13.776, infea=8.31366e-15
+iter=0, acc=0.897436, score=-37.7991, val=0.200904, infea=0
+iter=411, acc=0.919355, score=-60.5599, val=-50.4333, infea=3.99854e-15
+iter=0, acc=0.87234, score=-47.1548, val=-1.15485, infea=0
+iter=381, acc=0.827586, score=-53.2881, val=-24.8514, infea=2.01877e-14
+iter=0, acc=0.941176, score=-34.628, val=-1.62796, infea=0
+iter=408, acc=0.804878, score=-39.299, val=-28.1374, infea=8.11157e-15
+iter=1, acc=0.837838, score=-35.4085, val=-34.4085, infea=0
+iter=501, acc=0.868852, score=-58.3054, val=-20.5556, infea=1.4766e-14
+iter=622, acc=0.890909, score=-49.3805, val=17.6665, infea=3.55345e-14
+iter=602, acc=0.836066, score=-56.8547, val=-20.2294, infea=1.76692e-14
+uni_search=0.106726, uni_subsolve=0.170024, bi_search=3.39443, bi_subsolve=0.10447, maintain=0.0700743, construct=0.0140971, Acc=0.875
+prediction time=4.75278
