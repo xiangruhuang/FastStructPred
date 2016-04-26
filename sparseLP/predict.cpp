@@ -1,5 +1,5 @@
 #include "problem.h"
-//#include "LPsparse.h"
+#include "LPsparse.h"
 #include "model.h"
 #include "factor.h"
 
@@ -13,6 +13,7 @@ void exit_with_help(){
 	cerr << "	1 -- sparseLP" << endl;
 	cerr << "-e eta: GDMM step size" << endl;
 	cerr << "-o rho: coefficient/weight of message" << endl;
+	cerr << "-m max_iter: max number of iterations" << endl;
 	exit(0);
 }
 
@@ -33,6 +34,8 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 				  break;
 			case 'o': param->rho = atof(argv[i]);
 				  break;
+			case 'm': param->max_iter = atoi(argv[i]);
+				  break;
 			default:
 				  cerr << "unknown option: -" << argv[i-1][1] << endl;
 				  exit(0);
@@ -52,107 +55,128 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 	}
 }
 
-void construct_factor(Problem* prob, Model* model, Param* param, vector<uni_factor*>& nodes, vector<bi_factor*>& edges){
+void construct_factor(Instance* ins, Model* model, Param* param, vector<uni_factor*>& nodes, vector<bi_factor*>& edges){
 	//construct uni_factors
 	nodes.clear();
 	edges.clear();
-	int node_count = 0;
-	int n = prob->data.size();
-	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
-		Instance* ins = *it_ins;
+	//int node_count = 0;
+	//int n = prob->data.size();
+	//for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
+	//	Instance* ins = *it_ins;
 		//for this instance
 		
-		//offset of this subgraph
-		int offset = node_count;
-		
-		//construct uni_factors
-		for (vector<SparseVec*>::iterator it_node = ins->features.begin(); it_node != ins->features.end(); it_node++){
-			uni_factor* node = new uni_factor(model->K, *it_node, model->w, param);
-			nodes.push_back(node);
-		}
-		
-		//construct bi_factors
-		for (vector<pair<int, int>>::iterator it_e = ins->edges.begin(); it_e != ins->edges.end(); it_e++){
-			uni_factor* l = nodes[offset + it_e->first];
-			uni_factor* r = nodes[offset + it_e->second];
-			bi_factor* edge = new bi_factor(model->K, l, r, model->v, param);
-			edges.push_back(edge);
-		}
+	//offset of this subgraph
+	//int offset = node_count;
+
+	//construct uni_factors
+	for (vector<SparseVec*>::iterator it_node = ins->features.begin(); it_node != ins->features.end(); it_node++){
+		uni_factor* node = new uni_factor(model->K, *it_node, model->w, param);
+		nodes.push_back(node);
 	}
-	assert(n + edges.size() == nodes.size());
+
+	//construct bi_factors
+	for (vector<pair<int, int>>::iterator it_e = ins->edges.begin(); it_e != ins->edges.end(); it_e++){
+		uni_factor* l = nodes[it_e->first];
+		uni_factor* r = nodes[it_e->second];
+		bi_factor* edge = new bi_factor(model->K, l, r, model->v, param);
+		edges.push_back(edge);
+	}
+	//}
+	//assert(n + edges.size() == nodes.size());
 }
 
-Float compute_acc(Problem* prob, Model* model, vector<uni_factor*> nodes){
+Float compute_acc(Problem* prob, Instance* ins, Model* model, vector<uni_factor*> nodes){
 
 	int node_count = 0;
 	int hit = 0;
 	int N = 0;
-	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
-		Instance* ins = *it_ins;
-		//for this instance
-		
-		//offset of this subgraph
-		int offset = node_count;
-		
-		//compute hits
-		for (vector<SparseVec*>::iterator it_node = ins->features.begin(); it_node != ins->features.end(); it_node++, node_count++){
-			
-			uni_factor* node = nodes[node_count];
-			//Rounding
-			Float r = (Float)rand()/RAND_MAX;
-			int label = -1;
-			for (int k = 0; k < model->K; k++){
-				if (r <= node->y[k]){
-					label = k;
-					break;
-				} else {
-					r -= node->y[k];
-				}
+	//for this instance
+
+	//compute hits
+	for (vector<SparseVec*>::iterator it_node = ins->features.begin(); it_node != ins->features.end(); it_node++, node_count++){	
+		uni_factor* node = nodes[node_count];
+		//Rounding
+		int label = -1;
+		double s = 0.0;
+		for (int k = 0; k < model->K; k++){
+			s += node->y[k];
+		}
+		Float r = s*((Float)rand()/RAND_MAX);
+		for (int k = 0; k < model->K; k++){
+			if (r <= node->y[k]){
+				label = k;
+				break;
+			} else {
+				r -= node->y[k];
 			}
-			assert(label != -1 /* prediction should be valid */);
-			if (prob->label_name_list[ins->labels[node_count - offset]] == model->label_name_list->at(label)){
-				hit++;
-			}
-			N++;
+		}
+		assert(label != -1 /* prediction should be valid */);
+		if (prob->label_name_list[ins->labels[node_count]] == model->label_name_list->at(label)){
+			hit++;
 		}
 	}
-	return (Float)hit/N;
+	return (Float)hit/ins->T;
 }
 
 void struct_predict(Problem* prob, Model* model, Param* param){
 	vector<uni_factor*> nodes; 
 	vector<bi_factor*> edges;
-	construct_factor(prob, model, param, nodes, edges);
-	
-	int iter = 0;
-	int max_iter = param->max_iter;
-	while (iter < max_iter){
+	Float hit = 0.0;
+	Float N = 0.0;
+	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
+		Instance* ins = *it_ins;
+		construct_factor(ins, model, param, nodes, edges);
+		int iter = 0;
+		int max_iter = param->max_iter;
 		Float score = 0.0;
-		for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
-			uni_factor* node = *it_node;
-			node->search();
-			node->subsolve();
-			score += node->score();
-		}
-		
-		/*for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
-			bi_factor* edge = *it_edge;
-			edge->search();
-			edge->subsolve();
-		}
-		
-		for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
-			bi_factor* edge = *it_edge;
-			edge->update_multipliers();
-		}*/
-		cerr << "iter=" << iter 
-		<< ", acc=" << compute_acc(prob, model, nodes) 
-		<< ", score=" << score 
-		<< endl;
-		
-		iter++;
-	}
+		Float p_inf = 0.0;
+		Float val = 0.0;
+		while (iter < max_iter){
+			score = 0.0;
+			p_inf = 0.0;
+			val = 0.0;
+			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
+				uni_factor* node = *it_node;
+				node->search();
+				node->subsolve();
+				score += node->score();
+				val += node->func_val();
+				//node->display();
+			}
 
+			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
+				bi_factor* edge = *it_edge;
+				edge->search();
+				edge->subsolve();
+				score += edge->score();
+				val += edge->func_val();
+				p_inf += edge->infea();
+				//edge->display();
+			}
+
+			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
+				bi_factor* edge = *it_edge;
+				edge->update_multipliers();
+			}
+
+			if (p_inf < 1e-6)
+				break;
+			
+			iter++;
+		}
+		//cerr << endl;
+		Float acc = compute_acc(prob, ins, model, nodes);
+		/*cerr << "iter=" << iter 
+			<< ", acc=" << acc
+			<< ", score=" << score 
+			<< ", val=" << val
+			<< ", infea=" << p_inf
+			<< endl;*/
+		hit += acc*ins->T;
+		N += ins->T;
+		//cerr << "_Acc=" << hit/N << endl;
+	}	
+	cerr << "Acc=" << hit/N << endl;
 }
 
 int main(int argc, char** argv){
@@ -179,12 +203,17 @@ int main(int argc, char** argv){
 	cerr << "prob.K=" << prob->K << endl;
 	cerr << "prob.N=" << prob->data.size() << endl;
 	cerr << "param.rho=" << param->rho << endl;
+	cerr << "param.eta=" << param->eta << endl;
 
+	prediction_time -= omp_get_wtime();
 	if (param->solver == 0){
 		ChainProblem* chain = new ChainProblem(param->testFname);
 		cerr << "Acc=" << model->calcAcc_Viterbi(chain) << endl;
 	} else {
+		//cerr << "Acc=" << compute_acc_sparseLP(model, prob) << endl;
 		struct_predict(prob, model, param);
 	}
+	prediction_time += omp_get_wtime();
+	cerr << "prediction time=" << prediction_time << endl;
 	return 0;	
 }

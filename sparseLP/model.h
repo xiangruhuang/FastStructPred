@@ -177,19 +177,32 @@ class Model{
 				pred[t-1] = argmax_sum[t][ pred[t] ];
 			}
 
+			//for (int t = 0; t < seq->T; t++)
+			//	cerr << "max_score @"<< t <<"= " << max_sum[t][pred[t]] << endl;
+			
+			/*cerr << "c[27]=" << max_sum[0][27] << endl;
+			cerr << "v[27][9]=" << v[27][9] << endl;
+			double c9 = 0.0;
+			SparseVec* xii = seq->features[1];
+			for(SparseVec::iterator it=xii->begin(); it!=xii->end(); it++)
+					c9 += w[it->first][9] * it->second;
+			cerr << "c[9]=" << c9 << endl;*/
 			///////////
-			//for (Int t = 0; t < seq->T; t++){
-			//	cerr << label_name_list->at(pred[t]) << " ";
-			//}
-			//cerr << endl;
+			/*for (Int t = 0; t < seq->T; t++){
+				cerr << pred[t] << " ";
+			}
+			cerr << endl;*/
 			///////////			
 
 			//compute accuracy
+			int temp_hit = hit;
 			for(Int t=0;t<seq->T;t++){
 				if( label_name_list->at(pred[t]) == prob->label_name_list[seq->labels[t]] )
 				//if( pred[t] == seq->labels[t] )
 					hit++;
 			}
+		
+			//cerr << (double)(hit-temp_hit)/(seq->T) << endl;
 
 			for(Int t=0; t<seq->T; t++){
 				delete[] max_sum[t];

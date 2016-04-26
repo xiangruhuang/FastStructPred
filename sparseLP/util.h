@@ -16,9 +16,10 @@
 #include <queue>
 #include <algorithm>
 #include <iomanip>
+#include <cassert>
 using namespace std;
 
-typedef float Float;
+typedef double Float;
 typedef int Int;
 typedef vector<pair<Int,Float> > SparseVec;
 typedef unordered_map<Int,Float> HashVec;
@@ -218,16 +219,20 @@ inline void solve_simplex(int n, Float* y, Float* b){
 	*/
 	for (int i = n-1; i >= 0; i--){
 		double t = (sum - 1.0)/(i+1);
-		if (/*b[index[i]] >= 0 && */b[index[i]] >= t){
+		if (/*b[index[i]] >= 0 &&*/ b[index[i]] >= t){
 			//feasible
 			
 			//if (sum <= 1)
 			//	t = 0.0;
+			
+			//cerr << b[index[0]] << endl;
 			//cerr << setprecision(10) << "t= " << t << ", sum=" << sum << ", b[index[i]]=" << b[index[i]] << ", i=" << i << endl;
+			
 			for (int j = 0; j < n; j++){
 				y[index[j]] = b[index[j]] - t;
 				if (y[index[j]] < 0.0)
 					y[index[j]] = 0;
+				assert(y[index[j]] <= 1 + 1e-6);
 			}
 			break;
 		}

@@ -74,7 +74,9 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 	
 	//initialize active index
 	int* index = new int[n+nf];
-	int active_size = 0;
+	int active_size = n+nf;
+	for (int i = 0; i < n+nf; i++)
+		index[i] = i;
 	
 	int iter=0;
 	double PG, PGmax_old = 1e300, PGmax_new;
@@ -82,7 +84,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 	bool* inside = new bool[n + nf];
 	memset(inside, 0, sizeof(bool)*(n+nf));
 
-	ArrayHeap heap = new pair<Float, Int>[n+nf];
+	//ArrayHeap heap = new pair<Float, Int>[n+nf];
 	
 	
 	while(iter < inner_max_iter){
@@ -90,7 +92,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		random_shuffle(index, index+active_size);
 
 		//search
-		for (int s = 0; s < active_size; s++){
+		/*for (int s = 0; s < active_size; s++){
 			inside[index[s]] = true;
 		}
 		double gmax = 0.0;
@@ -127,7 +129,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			// cerr << "adding active coordinate" << endl;
 			index[active_size++] = max_index;
 			inside[max_index] = true;
-		}
+		}*/
 
 		//update
 		for(int s=0;s<active_size;s++){
@@ -395,7 +397,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 		}
 		
 		// w_t = Ax-b + w_{t-1} = w_t-1 + alpha_{t}/eta_t - alpha_{t-1}/eta_t  
-
+		
 		for(int i=0;i<m;i++){ //inequality
 			if( w[i] > 0 )
 				w[i] -= b[i];
@@ -687,13 +689,14 @@ Float compute_acc_sparseLP(Model* model, Problem* prob){
 		*/
 		
 		//compute #hit
+		int temp_hit = hit;
 		for (Int i = 0; i < ins->T; i++){
 			if (model->label_name_list->at(pred[i]) == prob->label_name_list[ins->labels[i]]){
 				hit++;
 			}
 		}
 
-		cerr << "acc=" << ((double)hit/N) << endl;
+		cerr << "acc=" << ((double)(hit-temp_hit)/ins->T) << endl;
 
 		delete[] pred;
 	}
