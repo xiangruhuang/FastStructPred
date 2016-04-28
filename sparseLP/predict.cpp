@@ -1,8 +1,6 @@
 #include "problem.h"
-//#include "LPsparse.h"
-//#include "model.h"
 #include "factor.h"
-
+#include <time.h>
 double prediction_time = 0.0;
 
 void exit_with_help(){
@@ -69,10 +67,10 @@ inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& n
 	//construct bi_factors
 	for (int e = 0; e < ins->edges.size(); e++){
 		int e_l = ins->edges[e].first, e_r = ins->edges[e].second;
-		Float* c_f = ins->edge_score_vecs[e];
+		ScoreVec* sv = ins->edge_score_vecs[e];
 		uni_factor* l = nodes[e_l];
 		uni_factor* r = nodes[e_r];
-		bi_factor* edge = new bi_factor(l, r, c_f, param);
+		bi_factor* edge = new bi_factor(l, r, sv, param);
 		edges.push_back(edge);
 	}
 }
@@ -134,13 +132,18 @@ void struct_predict(Problem* prob, Param* param){
 		Float p_inf = 0.0;
 		Float val = 0.0;
 		Float act_on_node = 0.0, act_on_edge = 0.0;
-		while (iter < max_iter){
+		Float ever_act_on_node = 0.0;
+        Float nnz_msg = 0.0;
+        Float acc = 0.0;
+        while (iter < max_iter){
 			score = 0.0;
 			p_inf = 0.0;
 			val = 0.0;
 			act_on_node = 0.0;
 			act_on_edge = 0.0;
-			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
+            ever_act_on_node = 0.0;
+			nnz_msg = 0.0;
+            for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
 				uni_factor* node = *it_node;
 
 				uni_search_time -= omp_get_wtime();
@@ -151,12 +154,16 @@ void struct_predict(Problem* prob, Param* param){
 				node->subsolve();
 				uni_subsolve_time += omp_get_wtime();
 
-				//score += node->score();
-				//val += node->func_val();
+                prediction_time += omp_get_wtime();
+				score += node->score();
+				val += node->func_val();
 				act_on_node += node->act_set.size();
+				ever_act_on_node += node->ever_act_set.size();
 				//node->display();
+                prediction_time -= omp_get_wtime();
 			}
 			act_on_node /= nodes.size();
+            ever_act_on_node /= nodes.size();
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
@@ -169,14 +176,17 @@ void struct_predict(Problem* prob, Param* param){
 				edge->subsolve();
 				bi_subsolve_time += omp_get_wtime();
 
-				//score += edge->score();
-				//val += edge->func_val();
+                prediction_time += omp_get_wtime();
+				score += edge->score();
+				val += edge->func_val();
 				act_on_edge += edge->act_set.size();
-				//p_inf += edge->infea();
-
+				p_inf += edge->infea();
+                nnz_msg += edge->nnz_msg();
 				//edge->display();
+                prediction_time -= omp_get_wtime();
 			}
 			act_on_edge /= edges.size();
+            nnz_msg /= edges.size();
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
@@ -184,25 +194,26 @@ void struct_predict(Problem* prob, Param* param){
 				edge->update_multipliers();
 				maintain_time += omp_get_wtime();
 			}
-
+ 
 			if (p_inf < 1e-6)
 				break;
 			
 			iter++;
 		}
-		//cerr << endl;
-		Float acc = compute_acc(ins, nodes);
-		cerr << "iter=" << iter 
-			<< ", avg_act_node=" << act_on_node
-			<< ", avg_act_edge=" << act_on_edge
-			<< ", acc=" << acc
-			<< ", score=" << score 
-			<< ", val=" << val
-			<< ", infea=" << p_inf
-			<< endl;
+        acc = compute_acc(ins, nodes);
+        cerr << "iter=" << iter 
+            //<< ", T=" << edges.size()+1
+            << ", avg_act_node=" << act_on_node
+            << ", avg_act_edge=" << act_on_edge
+            << ", avg_ever_act_node=" << ever_act_on_node
+            << ", nnz_msg=" << nnz_msg
+            << ", acc=" << acc
+            << ", score=" << score 
+            << ", val=" << val
+            << ", infea=" << p_inf
+            << endl;
 		hit += acc*ins->T;
 		N += ins->T;
-		//cerr << "_Acc=" << hit/N << endl;
 	}
 	cerr << "uni_search=" << uni_search_time
 		<< ", uni_subsolve=" << uni_subsolve_time
@@ -289,6 +300,7 @@ int main(int argc, char** argv){
 		exit_with_help();
 	}
 
+    srand(time(NULL));
 	Param* param = new Param();
 	parse_cmd_line(argc, argv, param);
 	

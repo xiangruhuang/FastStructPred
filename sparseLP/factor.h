@@ -1,16 +1,14 @@
 //prediction
 
 #include "util.h"
-//#include "model.h"
 
-//unigram factor, follows simplex constraints
+//unigram factor, y follows simplex constraints
 class uni_factor{
 	public:
 	//fixed
 	int K;
 	Float rho;
-	//Float eta;
-	Float* c; // c[k] = -<w_k, x>
+	Float* c; // score vector, c[k] = -<w_k, x>
 	
 	//maintained
 	Float* grad;
@@ -18,6 +16,8 @@ class uni_factor{
 	bool* inside;
 	vector<Float*> msgs;
 	vector<int> act_set;
+    vector<int> ever_act_set;
+    bool* is_ever_act;
 
 	inline uni_factor(int _K, Float* _c, Param* param){
 		K = _K;
@@ -36,7 +36,10 @@ class uni_factor{
 
 		inside = new bool[K];
 		memset(inside, false, sizeof(bool)*K);
-		act_set.clear();
+        act_set.clear();
+        ever_act_set.clear();
+        is_ever_act = new bool[K];
+        memset(is_ever_act, false, sizeof(bool)*K);
 		msgs.clear();
 
 		//temporary
@@ -47,16 +50,20 @@ class uni_factor{
 		delete[] y;
 		delete[] grad;
 		delete[] inside;
+        delete[] is_ever_act;
 		act_set.clear();
 		msgs.clear();
 	}
 	
 	void fill_act_set(){
 		act_set.clear();
+        ever_act_set.clear();
 		for (int k = 0; k < K; k++){
 			act_set.push_back(k);
+            ever_act_set.push_back(k);
+            is_ever_act[k] = true;
 			inside[k] = true;
-		}	
+		}
 	}
 
 	inline void search(){
@@ -80,9 +87,13 @@ class uni_factor{
 				max_index = k;
 			}
 		}
-		//cerr << "g[9]=" << grad[9] << ", gmax=" << gmax << endl;
-		if (max_index != -1){
+		
+        if (max_index != -1){
 			act_set.push_back(max_index);
+            if (!is_ever_act[max_index]){
+                is_ever_act[max_index] = true;
+                ever_act_set.push_back(max_index);
+            }
 			inside[max_index] = true;
 		}
 	}
@@ -181,7 +192,8 @@ class uni_factor{
 	//goal: minimize score
 	Float score(){
 		Float score = 0.0;
-		for (int k = 0; k < K; k++){
+		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+            int k = *it;
 			score += c[k]*y[k];
 		}
 		return score;
@@ -190,7 +202,8 @@ class uni_factor{
 	// F = c^T y + \rho/2 \sum_{msg} \|msg \|^2
 	Float func_val(){
 		Float val = 0.0;
-		for (int k = 0; k < K; k++){
+		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+            int k = *it;
 			val += c[k]*y[k];
 		}
 		for (vector<Float*>::iterator m = msgs.begin(); m != msgs.end(); m++){
@@ -203,7 +216,8 @@ class uni_factor{
 	}
 	
 	void display(){
-		cerr << "act_set=" << act_set.size() << endl;
+
+		cerr << "act_size=" << act_set.size() << endl;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
 			int k = *it;
 			cerr << k << ":" << y[k] << " ";
@@ -224,18 +238,21 @@ class bi_factor{
 	uni_factor* l;
 	uni_factor* r;
 	Float* c; // score vector: c[k1k2] = -v[k1k2/K][k1k2%K];
-	
+    pair<Float, int>* sorted_c; // sorted <score, index> vector; 
+    pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
+    pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
+
 	//maintained
 	Float* msgl; // message to uni_factor l
 	Float* msgr; // messageto uni_factor r
 	Float* sumcol; // sumcol[k] = sum(y[:][k])
 	Float* sumrow; // sumrow[k] = sum(y[k][:])
 	Float* y; // relaxed prediction matrix (vector)
-	//Float* grad;
 	vector<int> act_set;
 	bool* inside;
+    int double_zero_area_index;
 
-	inline bi_factor(uni_factor* _l, uni_factor* _r, Float* _c, Param* param){
+	inline bi_factor(uni_factor* _l, uni_factor* _r, ScoreVec* sv, Param* param){
 		l = _l;
 		r = _r;
 		K1 = l->K;
@@ -253,8 +270,12 @@ class bi_factor{
 		memset(sumrow, 0.0, sizeof(Float)*K1);
 		sumcol = new Float[K2];
 		memset(sumcol, 0.0, sizeof(Float)*K2);
-		c = _c;
-		
+		c = sv->c;
+		sorted_c = sv->sorted_c;
+		sorted_row = sv->sorted_row;
+		sorted_col = sv->sorted_col;
+        double_zero_area_index = 0;
+
 		y = new Float[K1*K2];
 		memset(y, 0.0, sizeof(Float)*K1*K2);
 		
@@ -289,12 +310,15 @@ class bi_factor{
 			inside[kk] = true;
 		}
 	}
-	
+
+    //should be deleted
+    int best_index = -1;
+    /////////
 	inline void naive_search(){
 		//compute gradient
 	
-		//find argmax
-		Float gmax = 0.0;
+		//find max (-gradient)
+		Float gmax = -1e100;
 		int max_index = -1;
 		for (Int k1k2 = 0; k1k2 < K1 * K2; k1k2++){
 			if (inside[k1k2]) continue;
@@ -305,17 +329,152 @@ class bi_factor{
 				max_index = k1k2;
 			}
 		}
-		//cerr << "msgl[27]=" << msgl[27] << endl;
-		//cerr << "g[27,9] = " << (c[27*K+9] + rho * (msgl[27] + msgr[9])) << ", gmax = " << gmax << ", max(k1,k2)=" << (max_index / K) << "," << (max_index % K)<< endl;
 		if (max_index != -1){
-			act_set.push_back(max_index);
+            best_index = max_index;
+            act_set.push_back(max_index);
 			inside[max_index] = true;
 		}
 	}
 
+    //bi_search
 	inline void search(){
-		//find argmax
-		naive_search();
+		//naive_search();
+        //return;
+        //find argmin_{k_1, k_2} gradient(k1, k2) = c[k1*K2+k2] + rho(msgl[k1] + msgr[k2])  
+        int min_index = -1;
+        Float gmin = 0.0;
+        
+        vector<int>& nnz_left = l->ever_act_set;
+        vector<int>& nnz_right = r->ever_act_set;
+        //area 1: msgl != 0, msgr != 0, search every entry
+        for (vector<int>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
+            int k1 = *it_l;
+            int offset = k1*K2;
+            Float msgl_k1 = msgl[k1];
+            for (vector<int>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
+                int k2 = *it_r;
+                int k1k2 = offset + k2;
+                if (inside[k1k2]) continue;
+                Float g = c[k1k2] + rho*(msgl_k1 + msgr[k2]);
+                if (g < gmin){
+                    gmin = g;
+                    min_index = offset + k2;
+                }
+            }
+        }
+
+        //area 2: msgl != 0, msgr = 0, 
+        //subtask: find gmin_{k1} for each row (k1, :).
+        //Here msgl_k1 is fixed, c[k1, k2] + rho*msgl_k1 + rho*msgr[k2] >= c[k1, k2] + rho*msgl_k1.
+        //We visit (k1, :) in increasing order of c. Notice that:
+        //1. At any time (even include (k1,k2) that is inside act_set), (c[k1, k2] + rho*msgl_k1) is a lower bound of gmin_{k1}. 
+        //2. If we ever found that (!inside[k1, k2] && msgr[k2] <= 0), then (c[k1, k2] + rho*msgl_k1 + rho*msgr[k2]) can dominate this row. And we can just stop here. 
+        for (vector<int>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
+            int k1 = *it_l;
+            int offset = k1*K2;
+            Float msgl_k1 = msgl[k1];
+            pair<Float, int>* sorted_row_k1 = sorted_row[k1];
+            //visit row (k1, :) in increasing order of c
+            for (int ind = 0; ind < K2; ind++){
+                int k2 = sorted_row_k1[ind].second;
+                Float val = sorted_row_k1[ind].first;
+                
+                int k1k2 = offset + k2;
+                if (inside[k1k2]){
+                    //can't be used as candidate, but can provide lower bound for all feasible values
+                    if (val + rho * msgl_k1 > gmin){
+                        //lower bound is larger than current min value, 
+                        break;
+                    }
+                    continue;
+                }
+                //try to update gmin
+                if (gmin > val + rho * (msgl_k1 + msgr[k2]) ){
+                    gmin = val + rho * (msgl_k1 + msgr[k2]) ;
+                    min_index = offset + k2;
+                }
+                if (msgr[k2] <= 0){
+                    //this is a dominator, since it's already updated, we simply break here.
+                    break;
+                }
+                if (val + rho * msgl_k1 > gmin){
+                    //lower bound is larger than current min value, 
+                    break;
+                }
+            }
+        }
+
+        //area 3: msgl = 0, msgr != 0, 
+        //subtask: find gmin_{k2} for each col (:, k2).
+        //Here msgr_k2 is fixed, c[k1, k2] + rho*msgl[k1] + rho*msgr_k2 >= c[k1, k2] + rho*msgr_k2.
+        //We visit (:, k2) in increasing order of c. Notice that:
+        //1. At any time (even include (k1,k2) that is inside act_set), (c[k1, k2] + rho*msgr_k2) is a lower bound of gmin_{k2}. 
+        //2. If we ever found that (!inside[k1, k2] && msgl[k1] <= 0), then (c[k1, k2] + rho*msgl[k1] + rho*msgr_k2) can dominate this row. And we can just stop here. 
+        for (vector<int>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
+            int k2 = *it_r;
+            Float msgr_k2 = msgr[k2];
+            pair<Float, int>* sorted_col_k2 = sorted_col[k2];
+            //visit col (:, k2) in increasing order of c
+            for (int ind = 0; ind < K1; ind++){
+                int k1 = sorted_col_k2[ind].second;
+                Float val = sorted_col_k2[ind].first;
+                int k1k2 = k1 * K2 + k2;
+                if (inside[k1k2]){
+                    //can't be used as candidate, but can provide lower bound for all feasible values
+                    if (val + rho * msgr_k2 >= gmin){
+                        //lower bound is larger than current min value, 
+                        break;
+                    }
+                    continue;
+                }
+                //try to update gmin
+                if (gmin > val + rho * (msgl[k1] + msgr_k2) ){
+                    gmin = val + rho * (msgl[k1] + msgr_k2) ;
+                    min_index = k1k2;
+                }
+                if (msgl[k1] <= 0){
+                    //this is a dominator, since it's already updated, we simply break here.
+                    break;
+                }
+                if (val + rho * msgr_k2 > gmin){
+                    //lower bound is larger than current min value, 
+                    break;
+                }
+            }
+        }
+
+        //area 4: msgl = 0, msgr = 0
+        bool* ever_act_l = l->is_ever_act;
+        bool* ever_act_r = r->is_ever_act;
+        pair<Float, int> d = sorted_c[double_zero_area_index];
+        while (ever_act_l[d.second / K2] || ever_act_r[d.second % K2]){
+            d = sorted_c[++double_zero_area_index];
+        }
+        if (d.first + rho*(msgl[d.second / K2] + msgr[d.second % K2]) < gmin){
+            //update gmin
+            gmin = d.first + rho*(msgl[d.second / K2] + msgr[d.second % K2]);
+            min_index = d.second;
+        }
+
+        //update active set
+        if (min_index != -1){
+            /*if (best_index != min_index){
+			    cerr << "best k1=" << best_index / K2 << ", k2=" << best_index % K2 << ", c=" << c[best_index] << ", msgl=" << rho*msgl[best_index / K2] << ", msgr=" << rho*msgr[best_index % K2] << endl;
+                cerr << "found k1=" << min_index / K2 << ", k2=" << min_index % K2 << ", c=" << c[min_index] << ", msgl=" << rho*msgl[min_index / K2] << ", msgr=" << rho*msgr[min_index % K2] << endl;
+                assert(fabs(gmin-c[best_index] - rho*(msgl[best_index / K2] + msgr[best_index % K2]) ) < 1e-6);
+            }*/
+            //adding min_index into active set, also update ever_act_set for l and r node
+            act_set.push_back(min_index);
+            inside[min_index] = true;
+            if (!(l->is_ever_act[min_index / K2])){
+                l->is_ever_act[min_index / K2] = true;
+                l->ever_act_set.push_back(min_index / K2);
+            }
+            if (!(r->is_ever_act[min_index % K2])){
+                r->is_ever_act[min_index % K2] = true;
+                r->ever_act_set.push_back(min_index % K2);
+            }
+        }
 	}
 
 	//       min_Y  <Y, -v> + \rho/2 ( \| msgl \|_2^2 + \| msgr \|_2^2 )
@@ -451,6 +610,19 @@ class bi_factor{
 			msgr[k] += eta * (sumcol[k] - y_r[k]);
 		}
 	}
+
+    inline int nnz_msg(){
+        int nnz = 0;
+        for (int i = 0; i < K1; i++){
+            if (msgl[i] < 0)
+                nnz++;
+        }
+        for (int i = 0; i < K2; i++){
+            if (msgr[i] < 0)
+                nnz++;
+        }
+        return nnz;
+    }
 
 	Float score(){
 		Float score = 0.0;

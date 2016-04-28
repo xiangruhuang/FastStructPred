@@ -27,11 +27,19 @@ class Param{
 	}
 };
 
+class ScoreVec{
+    public:
+	Float* c; // score vector: c[k1k2] = -v[k1k2/K][k1k2%K];
+    pair<Float, int>* sorted_c; // sorted <score, index> vector; 
+    pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
+    pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
+};
+
 //each Instance is an isolated subgraph
 class Instance{
 	public:
 	vector<Float*> node_score_vecs; 
-	vector<Float*> edge_score_vecs; 
+	vector<ScoreVec*> edge_score_vecs;
 	vector<vector<string>*> node_label_lists; 
 	Labels labels; 
 	int T; // number of nodes in this instance
@@ -76,9 +84,13 @@ class ChainProblem : public Problem{
 	//from model
 	Float** w; // w[:D][:K]
 	Float** v;
-	Float* c_f; // c_f[k1*K+k2] = -v[k1][k2];
-	vector<pair<int, Float>>* sparse_v;
-	
+	Float* c; // c[k1*K+k2] = -v[k1][k2];
+    pair<Float, int>* sorted_c; // sorted <score, index> vector; 
+    pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
+    pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
+    vector<pair<int, Float>>* sparse_v;
+    ScoreVec* sv;
+
 	ChainProblem(Param* _param) : Problem(_param) {}
 	
 	~ChainProblem(){
@@ -106,7 +118,14 @@ class ChainProblem : public Problem{
 		for (int k = 0; k < K; k++)
 			sparse_v[k].clear();
 		delete[] sparse_v;
-		delete[] c_f;
+		delete[] c;
+        delete[] sorted_c;
+        for (int k = 0; k < K; k++){
+            delete[] sorted_row[k];
+            delete[] sorted_col[k];
+        }
+        delete[] sorted_row;
+        delete[] sorted_col;
 	}
 	
 	void readTestData(char* fname){
@@ -116,9 +135,6 @@ class ChainProblem : public Problem{
 		Instance* ins = new Instance();
 		Int d = -1;
 		N = 0;
-		Float* c_f = new Float[K*K];
-		for (int kk = 0; kk < K*K; kk++)
-			c_f[kk] = -v[kk/K][kk%K];
 		while( !fin.eof() ){
 
 			fin.getline(line, LINE_LEN);
@@ -168,12 +184,13 @@ class ChainProblem : public Problem{
 					c[k] -= wj[k]*it->second;
 			}
 			x->clear();
-
+            
+            
 			ins->node_score_vecs.push_back(c);
 			ins->labels.push_back(lab_ind);
 			int len = ins->labels.size();
 			if (len >= 2){
-				ins->edge_score_vecs.push_back(c_f);
+				ins->edge_score_vecs.push_back(sv);
 				ins->edges.push_back(make_pair(len-2, len-1));
 			}
 		}
@@ -277,6 +294,46 @@ class ChainProblem : public Problem{
 				}
 			}
 		}
+		
+        c = new Float[K*K];
+		for (int kk = 0; kk < K*K; kk++)
+			c[kk] = -v[kk/K][kk%K];
+
+	    //sort c as well as each row and column in increasing order
+        int K1 = K;
+        int K2 = K;
+        sorted_row = new pair<Float, int>*[K1];
+        for (int k1 = 0; k1 < K1; k1++){
+            sorted_row[k1] = new pair<Float, int>[K2];
+        }
+        sorted_col = new pair<Float, int>*[K2];
+        for (int k2 = 0; k2 < K2; k2++){
+            sorted_col[k2] = new pair<Float, int>[K1];
+        }
+        sorted_c = new pair<Float, int>[K1*K2];
+        for (int k1 = 0; k1 < K1; k1++){
+            int offset = k1*K2;
+            pair<Float, int>* sorted_row_k1 = sorted_row[k1];
+            for (int k2 = 0; k2 < K2; k2++){
+                Float val = c[offset+k2];
+                sorted_c[offset+k2] = make_pair(val, offset+k2);
+                sorted_row_k1[k2] = make_pair(val, k2);
+                sorted_col[k2][k1] = make_pair(val, k1);
+            }
+        }
+        for (int k1 = 0; k1 < K1; k1++){
+            sort(sorted_row[k1], sorted_row[k1]+K2, less<pair<Float, int>>());
+        }
+        for (int k2 = 0; k2 < K2; k2++){
+            sort(sorted_col[k2], sorted_col[k2]+K1, less<pair<Float, int>>());
+        }
+        sort(sorted_c, sorted_c+K1*K2, less<pair<Float, int>>());
+        //store them in ScoreVec
+        sv = new ScoreVec();
+        sv->c = c;
+        sv->sorted_c = sorted_c;
+        sv->sorted_row = sorted_row;
+        sv->sorted_col = sorted_col;
 	}
 	void construct_data(){
 		//read model first, construct label name list and label index map

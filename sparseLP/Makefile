@@ -1,7 +1,8 @@
 FLAG= -fopenmp -std=c++11 -O3 -w
+CC=g++-4.8
 
 all:
-	g++ $(FLAG) -o predict predict.cpp
+	$(CC) $(FLAG) -o predict predict.cpp
 
 s=1
 m=10000
