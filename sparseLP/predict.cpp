@@ -1,7 +1,9 @@
 #include "problem.h"
 #include "factor.h"
 #include <time.h>
+
 double prediction_time = 0.0;
+extern Stats* stats;
 
 void exit_with_help(){
 	cerr << "Usage: ./train (options) [testfile] [model]" << endl;
@@ -86,26 +88,7 @@ inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
 	for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){	
 		uni_factor* node = *it_node;
 		//Rounding
-		int label = -1;
-		double s = 0.0;
-		int K = ins->node_label_lists[node_count]->size();
-		for (int k = 0; k < K; k++){
-			s += node->y[k];
-		}
-		Float r = s*((Float)rand()/RAND_MAX);
-		for (int k = 0; k < K; k++){
-			if (r <= node->y[k]){
-				label = k;
-				break;
-			} else {
-				r -= node->y[k];
-			}
-		}
-		assert(label != -1 /* prediction should be valid */);
-		//if (ins->node_label_lists[node_count]->at(ins->labels[node_count]) == model->label_name_list->at(label)){
-		if (ins->labels[node_count] == label){
-			hit++;
-		}
+		hit+=node->y[ins->labels[node_count]];
 	}
 	return (Float)hit/ins->T;
 }
@@ -115,112 +98,105 @@ void struct_predict(Problem* prob, Param* param){
 	vector<bi_factor*> edges;
 	Float hit = 0.0;
 	Float N = 0.0;
-	double uni_search_time = 0.0;
-	double uni_subsolve_time = 0.0;
-	double bi_search_time = 0.0;
-	double bi_subsolve_time = 0.0;
-	double maintain_time = 0.0;
-	double construct_time = 0.0;
+    int n = 0;
+    stats = new Stats();
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
 		Instance* ins = *it_ins;
-		construct_time -= omp_get_wtime();
+		stats->construct_time -= get_current_time();
 		construct_factor(ins, param, nodes, edges);
-		construct_time += omp_get_wtime();
+		stats->construct_time += get_current_time();
 		int iter = 0;
 		int max_iter = param->max_iter;
 		Float score = 0.0;
 		Float p_inf = 0.0;
-		Float val = 0.0;
-		Float act_on_node = 0.0, act_on_edge = 0.0;
-		Float ever_act_on_node = 0.0;
-        Float nnz_msg = 0.0;
+		//Float val = 0.0;
         Float acc = 0.0;
+        stats->clear();
         while (iter < max_iter){
 			score = 0.0;
 			p_inf = 0.0;
-			val = 0.0;
-			act_on_node = 0.0;
-			act_on_edge = 0.0;
-            ever_act_on_node = 0.0;
-			nnz_msg = 0.0;
+			//val = 0.0;
+			//nnz_msg = 0.0;
             for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
 				uni_factor* node = *it_node;
 
-				uni_search_time -= omp_get_wtime();
+				stats->uni_search_time -= get_current_time();
 				node->search();
-				uni_search_time += omp_get_wtime();
+				stats->uni_search_time += get_current_time();
 
-				uni_subsolve_time -= omp_get_wtime();
+				stats->uni_subsolve_time -= get_current_time();
 				node->subsolve();
-				uni_subsolve_time += omp_get_wtime();
+				stats->uni_subsolve_time += get_current_time();
 
-                prediction_time += omp_get_wtime();
+                prediction_time += get_current_time();
 				score += node->score();
-				val += node->func_val();
-				act_on_node += node->act_set.size();
-				ever_act_on_node += node->ever_act_set.size();
+				//val += node->func_val();
+				stats->uni_act_size += node->act_set.size();
+				stats->uni_ever_act_size += node->ever_act_set.size();
+                stats->num_uni++;
 				//node->display();
-                prediction_time -= omp_get_wtime();
+                prediction_time -= get_current_time();
 			}
-			act_on_node /= nodes.size();
-            ever_act_on_node /= nodes.size();
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
 
-				bi_search_time -= omp_get_wtime();
+				stats->bi_search_time -= get_current_time();
 				edge->search();
-				bi_search_time += omp_get_wtime();
+				stats->bi_search_time += get_current_time();
 
-				bi_subsolve_time -= omp_get_wtime();
+				stats->bi_subsolve_time -= get_current_time();
 				edge->subsolve();
-				bi_subsolve_time += omp_get_wtime();
+				stats->bi_subsolve_time += get_current_time();
 
-                prediction_time += omp_get_wtime();
+                prediction_time += get_current_time();
 				score += edge->score();
-				val += edge->func_val();
-				act_on_edge += edge->act_set.size();
+				//val += edge->func_val();
+				stats->bi_act_size += edge->act_set.size();
+                stats->num_bi++;
 				p_inf += edge->infea();
-                nnz_msg += edge->nnz_msg();
-				//edge->display();
-                prediction_time -= omp_get_wtime();
+                //nnz_msg += edge->nnz_msg();
+                //edge->display();
+                prediction_time -= get_current_time();
 			}
-			act_on_edge /= edges.size();
-            nnz_msg /= edges.size();
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
-				maintain_time -= omp_get_wtime();
+				stats->maintain_time -= get_current_time();
 				edge->update_multipliers();
-				maintain_time += omp_get_wtime();
+				stats->maintain_time += get_current_time();
 			}
  
-			if (p_inf < 1e-6)
+			if (p_inf < 1e-3)
 				break;
 			
 			iter++;
 		}
+        n++;
+        //nnz_msg /= edges.size()*(iter+1);
+        
+        prediction_time += get_current_time();
         acc = compute_acc(ins, nodes);
-        cerr << "iter=" << iter 
-            //<< ", T=" << edges.size()+1
-            << ", avg_act_node=" << act_on_node
-            << ", avg_act_edge=" << act_on_edge
-            << ", avg_ever_act_node=" << ever_act_on_node
-            << ", nnz_msg=" << nnz_msg
+        prediction_time -= get_current_time();
+        
+        cerr << "@" << n 
+            << ": iter=" << iter 
             << ", acc=" << acc
             << ", score=" << score 
-            << ", val=" << val
-            << ", infea=" << p_inf
-            << endl;
+            << ", infea=" << p_inf;
+
+        stats->display();
+        cerr << endl;
+        
 		hit += acc*ins->T;
 		N += ins->T;
 	}
-	cerr << "uni_search=" << uni_search_time
-		<< ", uni_subsolve=" << uni_subsolve_time
-		<< ", bi_search=" << bi_search_time
-		<< ", bi_subsolve=" << bi_subsolve_time 
-		<< ", maintain=" << maintain_time 
-		<< ", construct=" << construct_time 
+	cerr << "uni_search=" << stats->uni_search_time
+		<< ", uni_subsolve=" << stats->uni_subsolve_time
+		<< ", bi_search=" << stats->bi_search_time
+		<< ", bi_subsolve=" << stats->bi_subsolve_time 
+		<< ", maintain=" << stats->maintain_time 
+		<< ", construct=" << stats->construct_time 
 		<< ", Acc=" << hit/N << endl;
 }
 
@@ -308,8 +284,11 @@ int main(int argc, char** argv){
 	if (param->type == "chain"){
 		prob = new ChainProblem(param);
 		prob->construct_data();
-		cerr << "prob.D=" << ((ChainProblem*)prob)->D << endl;
-		cerr << "prob.K=" << ((ChainProblem*)prob)->K << endl;
+        int D = ((ChainProblem*)prob)->D; 
+        int K = ((ChainProblem*)prob)->K; 
+		cerr << "prob.D=" << D << endl;
+		cerr << "prob.K=" << K << endl;
+        cerr << "prob.nnz(v)=" << nnz( ((ChainProblem*)prob)->v, K, K, 1e-12 ) << endl; 
 	}
 	
 	cerr << "prob.N=" << prob->data.size() << endl;
@@ -317,14 +296,14 @@ int main(int argc, char** argv){
 	cerr << "param.rho=" << param->rho << endl;
 	cerr << "param.eta=" << param->eta << endl;
 
-	prediction_time = -omp_get_wtime();
+	prediction_time = -get_current_time();
 	if (param->solver == 0){
 		cerr << "Acc=" << Viterbi_predict((ChainProblem*)prob, param) << endl;
 	} else {
 		//cerr << "Acc=" << compute_acc_sparseLP(model, prob) << endl;
 		struct_predict(prob, param);
 	}
-	prediction_time += omp_get_wtime();
+	prediction_time += get_current_time();
 	cerr << "prediction time=" << prediction_time << endl;
 	return 0;	
 }

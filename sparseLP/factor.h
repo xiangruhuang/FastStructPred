@@ -2,6 +2,53 @@
 
 #include "util.h"
 
+class Stats{
+    public:
+    int num_bi;
+    int area1;
+    int area23;
+    int area4;
+    Float bi_act_size;
+    
+    int num_uni; 
+    Float uni_act_size;
+    Float uni_ever_act_size;
+
+	double uni_search_time = 0.0;
+	double uni_subsolve_time = 0.0;
+	double bi_search_time = 0.0;
+	double bi_subsolve_time = 0.0;
+	double maintain_time = 0.0;
+	double construct_time = 0.0;
+    
+    Stats(){
+        clear();
+        uni_search_time = 0.0;
+        uni_subsolve_time = 0.0;
+        bi_search_time = 0.0;
+        bi_subsolve_time = 0.0;
+        maintain_time = 0.0;
+        construct_time = 0.0;
+    }
+    void display(){
+        cerr << ", area1=" << (double)area1/num_bi << ", area23=" << (double)area23/num_bi
+            << ", area4=" << (double)area4/num_bi
+            << ", bi_act_size=" << (double)bi_act_size/num_bi; 
+
+        cerr << ", uni_act_size=" << (double)uni_act_size/num_uni
+            << ", uni_ever_act_size=" << (double)uni_ever_act_size/num_uni;
+    }
+    void clear(){
+        num_bi = 0; 
+        area1 = 0; area23 = 0; area4 = 0; bi_act_size = 0;
+        
+        num_uni = 0;
+        uni_act_size = 0; uni_ever_act_size = 0; 
+    }
+};
+
+Stats* stats = new Stats();
+
 //unigram factor, y follows simplex constraints
 class uni_factor{
 	public:
@@ -18,6 +65,7 @@ class uni_factor{
 	vector<int> act_set;
     vector<int> ever_act_set;
     bool* is_ever_act;
+    int searched_index;
 
 	inline uni_factor(int _K, Float* _c, Param* param){
 		K = _K;
@@ -66,6 +114,7 @@ class uni_factor{
 		}
 	}
 
+    //uni_search
 	inline void search(){
 		//compute gradient of y_i
 		for (int k = 0; k < K; k++){
@@ -88,12 +137,9 @@ class uni_factor{
 			}
 		}
 		
+        searched_index = max_index;
         if (max_index != -1){
 			act_set.push_back(max_index);
-            if (!is_ever_act[max_index]){
-                is_ever_act[max_index] = true;
-                ever_act_set.push_back(max_index);
-            }
 			inside[max_index] = true;
 		}
 	}
@@ -101,12 +147,12 @@ class uni_factor{
 
 	//	min_{y \in simplex} <c, y> + \rho/2 \sum_{msg \in msgs} \| (msg + y) - y \|_2^2
 	// <===>min_{y \in simplex} \| y - 1/|msgs| ( \sum_{msg \in msgs} (msg + y) - 1/\rho c ) \|_2^2
-	// <===>min_{y \in simplex} \| y - b \|_2^2	
+	// <===>min_{y \in simplex} \| y - b \|_2^2
+    // uni_subsolve
 	inline void subsolve(){
 		if (act_set.size() == 0)
 			return;
 		Float* y_new = new Float[act_set.size()];
-		//cerr << "before subsolve, val=" << func_val() << endl;
 		int act_count = 0;
 		if (msgs.size() == 0 || fabs(rho) < 1e-12){
 			//min_y <c, y>
@@ -145,14 +191,6 @@ class uni_factor{
 			}
 
 			solve_simplex(act_set.size(), y_new, b);
-			/*act_count = 0;
-			  for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			  int k = *it;
-			  cerr << k << ":" << b[act_count] << " ";
-			// << "=" << (y[k1][k2]) << "-" << (rho*(msgl[k1])) << "-" << (rho*(msgr[k2])) << "+" << (rho*(sumrow[k1])) << "+" << (rho*(sumcol[k2])) << " ";
-			}
-			cerr << endl;
-			 *///////////////////////
 			delete[] b;
 		}
 		
@@ -177,6 +215,14 @@ class uni_factor{
 			y[k] = y_new[act_count];
 			//shrink
 			if (y[k] > 1e-12){
+                if (k == searched_index){
+                    //this index is justed added by search()
+                    //Only if this index is active after subsolve, then it's added to ever_act_set
+                    if (!is_ever_act[searched_index]){
+                        is_ever_act[searched_index] = true;
+                        ever_act_set.push_back(searched_index);
+                    }
+                }
 				next_act_set.push_back(k);
 			} else {
 				inside[k] = false;
@@ -184,13 +230,11 @@ class uni_factor{
 		}
 		act_set = next_act_set;
 		
-		//cerr << "after subsolve, val=" << func_val() << endl;
-		
 		delete[] y_new;
 	}
 
 	//goal: minimize score
-	Float score(){
+	inline Float score(){
 		Float score = 0.0;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
             int k = *it;
@@ -200,7 +244,7 @@ class uni_factor{
 	}
 
 	// F = c^T y + \rho/2 \sum_{msg} \|msg \|^2
-	Float func_val(){
+	inline Float func_val(){
 		Float val = 0.0;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
             int k = *it;
@@ -215,7 +259,7 @@ class uni_factor{
 		return val;
 	}
 	
-	void display(){
+	inline void display(){
 
 		cerr << "act_size=" << act_set.size() << endl;
 		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
@@ -247,10 +291,11 @@ class bi_factor{
 	Float* msgr; // messageto uni_factor r
 	Float* sumcol; // sumcol[k] = sum(y[:][k])
 	Float* sumrow; // sumrow[k] = sum(y[k][:])
-	Float* y; // relaxed prediction matrix (vector)
-	vector<int> act_set;
+	//Float* Y; // relaxed prediction matrix (vector)
+	vector<pair<int, Float>> act_set; // <index, val> pair
 	bool* inside;
     int double_zero_area_index;
+    int searched_index;
 
 	inline bi_factor(uni_factor* _l, uni_factor* _r, ScoreVec* sv, Param* param){
 		l = _l;
@@ -276,8 +321,8 @@ class bi_factor{
 		sorted_col = sv->sorted_col;
         double_zero_area_index = 0;
 
-		y = new Float[K1*K2];
-		memset(y, 0.0, sizeof(Float)*K1*K2);
+		//Y = new Float[K1*K2];
+		//memset(Y, 0.0, sizeof(Float)*K1*K2);
 		
 		//cache
 		//grad = new Float[K1*K2];
@@ -292,7 +337,7 @@ class bi_factor{
 
 	~bi_factor(){
 
-		delete[] y;
+		//delete[] Y;
 		delete[] c;
 		delete[] msgl;
 		delete[] msgr;
@@ -306,14 +351,11 @@ class bi_factor{
 	void fill_act_set(){
 		act_set.clear();
 		for (int kk = 0; kk < K1*K2; kk++){
-			act_set.push_back(kk);
+			act_set.push_back(make_pair(kk, 0.0));
 			inside[kk] = true;
 		}
 	}
 
-    //should be deleted
-    int best_index = -1;
-    /////////
 	inline void naive_search(){
 		//compute gradient
 	
@@ -329,23 +371,27 @@ class bi_factor{
 				max_index = k1k2;
 			}
 		}
+        searched_index = max_index;
 		if (max_index != -1){
-            best_index = max_index;
-            act_set.push_back(max_index);
+            act_set.push_back(make_pair(max_index, 0.0));
 			inside[max_index] = true;
 		}
 	}
 
-    //bi_search
+    //bi_search()
 	inline void search(){
 		//naive_search();
         //return;
         //find argmin_{k_1, k_2} gradient(k1, k2) = c[k1*K2+k2] + rho(msgl[k1] + msgr[k2])  
         int min_index = -1;
         Float gmin = 0.0;
-        
+
         vector<int>& nnz_left = l->ever_act_set;
         vector<int>& nnz_right = r->ever_act_set;
+        //maintain stats of search 
+        stats->area1 += nnz_left.size() * nnz_right.size();
+        ////////
+        
         //area 1: msgl != 0, msgr != 0, search every entry
         for (vector<int>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
             int k1 = *it_l;
@@ -379,6 +425,9 @@ class bi_factor{
                 int k2 = sorted_row_k1[ind].second;
                 Float val = sorted_row_k1[ind].first;
                 
+                //maintain stats of search 
+                stats->area23++;
+                ////////
                 int k1k2 = offset + k2;
                 if (inside[k1k2]){
                     //can't be used as candidate, but can provide lower bound for all feasible values
@@ -419,6 +468,9 @@ class bi_factor{
                 int k1 = sorted_col_k2[ind].second;
                 Float val = sorted_col_k2[ind].first;
                 int k1k2 = k1 * K2 + k2;
+                //maintain stats of search 
+                stats->area23++;
+                ////////
                 if (inside[k1k2]){
                     //can't be used as candidate, but can provide lower bound for all feasible values
                     if (val + rho * msgr_k2 >= gmin){
@@ -447,7 +499,13 @@ class bi_factor{
         bool* ever_act_l = l->is_ever_act;
         bool* ever_act_r = r->is_ever_act;
         pair<Float, int> d = sorted_c[double_zero_area_index];
+        //maintain stats of search 
+        stats->area4++;
+        ////////
         while (ever_act_l[d.second / K2] || ever_act_r[d.second % K2]){
+            //maintain stats of search 
+            stats->area4++;
+            ////////
             d = sorted_c[++double_zero_area_index];
         }
         if (d.first + rho*(msgl[d.second / K2] + msgr[d.second % K2]) < gmin){
@@ -458,22 +516,14 @@ class bi_factor{
 
         //update active set
         if (min_index != -1){
-            /*if (best_index != min_index){
-			    cerr << "best k1=" << best_index / K2 << ", k2=" << best_index % K2 << ", c=" << c[best_index] << ", msgl=" << rho*msgl[best_index / K2] << ", msgr=" << rho*msgr[best_index % K2] << endl;
+            /*if (searched_index != min_index){
+			    cerr << "best k1=" << searched_index / K2 << ", k2=" << searched_index % K2 << ", c=" << c[searched_index] << ", msgl=" << rho*msgl[searched_index / K2] << ", msgr=" << rho*msgr[searched_index % K2] << endl;
                 cerr << "found k1=" << min_index / K2 << ", k2=" << min_index % K2 << ", c=" << c[min_index] << ", msgl=" << rho*msgl[min_index / K2] << ", msgr=" << rho*msgr[min_index % K2] << endl;
-                assert(fabs(gmin-c[best_index] - rho*(msgl[best_index / K2] + msgr[best_index % K2]) ) < 1e-6);
+                assert(fabs(gmin-c[searched_index] - rho*(msgl[searched_index / K2] + msgr[searched_index % K2]) ) < 1e-6);
             }*/
-            //adding min_index into active set, also update ever_act_set for l and r node
-            act_set.push_back(min_index);
+            //adding min_index into active set, update of ever_act_set is done after subsolve
+            act_set.push_back(make_pair(min_index, 0.0));
             inside[min_index] = true;
-            if (!(l->is_ever_act[min_index / K2])){
-                l->is_ever_act[min_index / K2] = true;
-                l->ever_act_set.push_back(min_index / K2);
-            }
-            if (!(r->is_ever_act[min_index % K2])){
-                r->is_ever_act[min_index % K2] = true;
-                r->ever_act_set.push_back(min_index % K2);
-            }
         }
 	}
 
@@ -484,36 +534,21 @@ class bi_factor{
 	// 		B_{(k_1, k_2)} = -v[k1][k2] + \rho * (msgl[k_1] - sumrow[k1] + msgr[k_2] - sumcol[k2])
 	// 		0 <= Y <= 1
 	//	Let C := -B/A
+    //	bi_subsolve()
 	inline void subsolve(){
-		/*
-		int* sl = new int[K1];
-		int* sr = new int[K2];
-		memset(sl, 0, sizeof(int)*K1);
-		memset(sr, 0, sizeof(int)*K2);
-		int max_sl = 0, max_sr = 0;
-		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-			int k1k2 = *it;
-			int k1 = k1k2 / K2, k2 = k1k2 % K2;
-			sl[k1]++; sr[k2]++;
-			if (max_sl < sl[k1])
-				max_sl = sl[k1];
-			if (max_sr < sr[k2])
-				max_sr = sr[k2];
-		}
-		*/
 		
-		Float A = rho * (K1 + K2); //(l->act_set.size() + r->act_set.size());
-		Float* y_new = new Float[act_set.size()];
+		Float A = rho * (l->ever_act_set.size() + r->ever_act_set.size());
+		Float* Y_new = new Float[act_set.size()];
 
 		int act_count = 0;
 		
-		if (fabs(rho) < 1e-12){
-			//min_y <c, y>
+		if (fabs(A) < 1e-12){
+			//min_Y <c, Y> since message has weight zero
 			Float cmin = 1e300;
 			int min_index = -1;
 			act_count = 0;
-			for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-				int k = *it;
+			for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+				int k = it->first;
 				if (c[k] < cmin){
 					cmin = c[k];
 					min_index = act_count;
@@ -521,79 +556,62 @@ class bi_factor{
 			}
 			assert(min_index != -1 && "smallest coordinate should exist");
 			
-			memset(y_new, 0.0, sizeof(Float)*act_set.size());
-			y_new[min_index] = 1.0;
+			memset(Y_new, 0.0, sizeof(Float)*act_set.size());
+			Y_new[min_index] = 1.0;
 		} else {
 			Float* C = new Float[act_set.size()];
 			act_count = 0;
-			for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-				int k1k2 = *it;
+			for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+				int k1k2 = it->first;
 				int k1 = k1k2 / K2;
 				int k2 = k1k2 % K2;
-				C[act_count] = -(c[k1k2] + rho * (msgl[k1] + msgr[k2] - sumrow[k1] - sumcol[k2]) - A*y[k1k2])/A; // C = -B/A
+				C[act_count] = -(c[k1k2] + rho * (msgl[k1] + msgr[k2] - sumrow[k1] - sumcol[k2]) - A*it->second)/A; // C = -B/A
 			}
-			//cerr << "before subsolve, val=" << func_val() << endl;
-
-			solve_simplex(act_set.size(), y_new, C);
-			/*act_count = 0;
-			  for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			  int k1k2 = *it;
-			  int k1 = k1k2 / K;
-			  int k2 = k1k2 % K;
-			  cerr << "(" << k1 << "," << k2 << "):" << C[act_count] << "=" << (-c[k1k2]/A) << "-" << (rho/A*(msgl[k1])) << "-" << (rho/A*(msgr[k2])) << "+" << (rho/A*(sumrow[k1])) << "+" << (rho/A*(sumcol[k2])) << " ";
-			  }
-			  cerr << endl;*/
+			solve_simplex(act_set.size(), Y_new, C);
 			delete[] C;
 		}
 		
-		//update y and message
+		//update Y and message
 		act_count = 0;
-		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			int k1k2 = *it;
-			if (fabs(y_new[act_count]) < 1e-12){
-				y_new[act_count] = 0.0;
+		for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+			int k1k2 = it->first;
+			if (fabs(Y_new[act_count]) < 1e-12){
+				Y_new[act_count] = 0.0;
 			}
-			Float delta_y = y_new[act_count] - y[k1k2];
+			Float delta_Y = Y_new[act_count] - it->second;
 			int k1 = k1k2 / K2, k2 = k1k2 % K2;
-			msgl[k1] += delta_y; sumrow[k1] += delta_y;
-			msgr[k2] += delta_y; sumcol[k2] += delta_y;
+			msgl[k1] += delta_Y; sumrow[k1] += delta_Y;
+			msgr[k2] += delta_Y; sumcol[k2] += delta_Y;
 		}
 	
-		vector<int> next_act_set;
+		vector<pair<int, Float>> next_act_set;
 		next_act_set.clear();
 		act_count = 0;
-		for(vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			int k1k2 = *it;
-			y[k1k2] = y_new[act_count];
+		for(vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+			int k1k2 = it->first;
+			it->second = Y_new[act_count];
 			//possible shrink here
-			if (y[k1k2] > 1e-12){
-				next_act_set.push_back(k1k2);
+			if (it->second > 1e-12){
+                if (k1k2 == searched_index){
+                    int k1 = searched_index / K2, k2 = searched_index % K2;
+                    if (!l->is_ever_act[k1]){
+                        l->is_ever_act[k1] = true;
+                        l->ever_act_set.push_back(k1);
+                    }
+                    if (!r->is_ever_act[k2]){
+                        r->is_ever_act[k2] = true;
+                        r->ever_act_set.push_back(k2);
+                    }
+                }
+				next_act_set.push_back(make_pair(k1k2, it->second));
 			} else {
 				inside[k1k2] = false;
 			}
 		}
 
-		//some check here
-		/*act_count = 0;
-		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			int k1k2 = *it;
-			int k1 = k1k2 / K;
-			int k2 = k1k2 % K;
-			C[act_count] = -(-v[k1][k2] + rho * (msgl[k1] + msgr[k2] - sumrow[k1] - sumcol[k2]))/A; // C = -B/A
-		}
-		solve_simplex(act_set.size(), y_new, C);
-		act_count = 0;
-		for(vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-			int k1k2 = *it;
-			assert(fabs(y[k1k2] - y_new[act_count]) < 1e-6);
-		}*/
-		///////////////////////////
-
 		act_set = next_act_set;
-		
-		//cerr << "after subsolve, val=" << func_val() << endl;
-
-		delete[] y_new;
+        
+		delete[] Y_new;
 	}
 	
 	//     \mu^{t+1} - \mu^t
@@ -624,20 +642,20 @@ class bi_factor{
         return nnz;
     }
 
-	Float score(){
+	inline Float score(){
 		Float score = 0.0;
-		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-			int k1k2 = *it;
-			score += c[k1k2]*y[k1k2];
+		for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+			int k1k2 = it->first;
+			score += c[k1k2]*it->second;
 		}
 		return score;
 	}
 	
 	// F = c^T Y + \rho/2 (\|msgl \|^2 + \|msgr\|^2_2)
-	Float func_val(){
+	inline Float func_val(){
 		Float val = 0.0;
-		for (int k = 0; k < K1*K2; k++){
-			val += c[k]*y[k];
+		for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+			val += c[it->first]*it->second;
 		}
 		for (int k = 0; k < K1; k++){
 			val += rho/2 * msgl[k] * msgl[k];
@@ -648,7 +666,7 @@ class bi_factor{
 		return val;
 	}
 	
-	Float infea(){
+	inline Float infea(){
 		Float p_inf = 0;
 		Float* y_l = l->y;
 		Float* y_r = r->y;
@@ -661,20 +679,13 @@ class bi_factor{
 		return p_inf;
 	}
 	
-	void display(){
-		/*for (int k = 0; k < K*K; k++){
-			if (k % K == 0)
-				cerr << endl;
-			cerr << y[k] << " ";
-		}
-		cerr << endl;
-		cerr << endl;*/
-		//cerr << "norm(c, 2)=" << norm_sq(c, K*K) << endl;
-		for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-			int kk = *it;
-			cerr << "(" << (kk/K2) << "," << (kk%K2) << ")" << ":" << y[kk] << " ";
+	inline void display(){
+		for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+			int kk = it->first;
+			cerr << "(" << (kk/K2) << "," << (kk%K2) << ")" << ":" << it->second << " ";
 		}
 		cerr << endl;
 	}
 
 };
+

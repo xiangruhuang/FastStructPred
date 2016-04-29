@@ -5,6 +5,8 @@
 //#include "extra.h"
 #include <cassert>
 
+extern double prediction_time;
+
 //parameters of a task
 class Param{
 
@@ -78,9 +80,9 @@ class ChainProblem : public Problem{
 	public:
 	map<string,Int> label_index_map;
 	vector<string> label_name_list;
-	Int D;
-	Int K;
-	Int N; // number of instances
+	int D;
+	int K;
+	int N; // number of instances
 	//from model
 	Float** w; // w[:D][:K]
 	Float** v;
@@ -136,7 +138,6 @@ class ChainProblem : public Problem{
 		Int d = -1;
 		N = 0;
 		while( !fin.eof() ){
-
 			fin.getline(line, LINE_LEN);
 			string line_str(line);
 			
@@ -247,10 +248,8 @@ class ChainProblem : public Problem{
 		line_str = string(line);
 		tokens = split(line_str, "=");
 		D = stoi(tokens[1]);
-		
 		//skip fourth line
 		fin.getline(line, LINE_LEN);
-
 		//next D lines: read w
 		w = new Float*[D];
 		for (Int j = 0; j < D; j++){
@@ -299,6 +298,10 @@ class ChainProblem : public Problem{
 		for (int kk = 0; kk < K*K; kk++)
 			c[kk] = -v[kk/K][kk%K];
 
+        if (param->solver == 1){
+            //extra sorting time is counted
+            prediction_time -= omp_get_wtime();
+        }
 	    //sort c as well as each row and column in increasing order
         int K1 = K;
         int K2 = K;
@@ -334,13 +337,17 @@ class ChainProblem : public Problem{
         sv->sorted_c = sorted_c;
         sv->sorted_row = sorted_row;
         sv->sorted_col = sorted_col;
+        
+        if (param->solver == 1){
+            //extra sorting time is counted
+            prediction_time += omp_get_wtime();
+        }
 	}
 	void construct_data(){
 		//read model first, construct label name list and label index map
 		readModel(param->modelFname);
 		//read data from test file, labels will be determined by label index map from model
 		readTestData(param->testFname);
-		
 	}
 
 

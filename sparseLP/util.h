@@ -177,6 +177,20 @@ Float prox_l1( Float v, Float lambda ){
 	return 0.0;
 }
 
+int nnz(Float** v, int m, int n, Float tol){
+    //v of size m by n
+    //check #nnz of v
+    int nnz = 0;
+    for (int i = 0; i < m; i++){
+        Float* vi = v[i];
+        for (int j = 0; j < n; j++){
+            if (fabs(vi[j]) > tol)
+                nnz++;
+        }
+    }
+    return nnz;
+}
+
 Float norm_sq( Float* v, Int size ){
 
 	Float sum = 0.0;
@@ -220,19 +234,17 @@ inline void solve_simplex(int n, Float* y, Float* b){
 	for (int i = n-1; i >= 0; i--){
 		double t = (sum - 1.0)/(i+1);
 		if (/*b[index[i]] >= 0 &&*/ b[index[i]] >= t){
-			//feasible
-			
-			//if (sum <= 1)
-			//	t = 0.0;
-			
-			//cerr << b[index[0]] << endl;
-			//cerr << setprecision(10) << "t= " << t << ", sum=" << sum << ", b[index[i]]=" << b[index[i]] << ", i=" << i << endl;
+			//feasible	
 			
 			for (int j = 0; j < n; j++){
 				y[index[j]] = b[index[j]] - t;
 				if (y[index[j]] < 0.0)
 					y[index[j]] = 0;
-				assert(y[index[j]] <= 1 + 1e-6);
+				if (y[index[j]] > 1 + 1e-6){
+                    cerr << b[index[0]] << endl;
+                    cerr << setprecision(10) << "t= " << t << ", sum=" << sum << ", b[index[i]]=" << b[index[i]] << ", i=" << i << endl;
+                }
+                assert(y[index[j]] <= 1 + 1e-6);
 			}
 			break;
 		}
