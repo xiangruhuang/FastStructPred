@@ -1,6 +1,7 @@
 #include "problem.h"
 #include "factor.h"
 #include <time.h>
+#include "LPsparse.h"
 
 double prediction_time = 0.0;
 extern Stats* stats;
@@ -35,6 +36,8 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 			case 'o': param->rho = atof(argv[i]);
 				  break;
 			case 'm': param->max_iter = atoi(argv[i]);
+				  break;
+			case 't': param->infea_tol = atof(argv[i]);
 				  break;
 			default:
 				  cerr << "unknown option: -" << argv[i-1][1] << endl;
@@ -93,13 +96,13 @@ inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
 	return (Float)hit/ins->T;
 }
 
-void struct_predict(Problem* prob, Param* param){
+double struct_predict(Problem* prob, Param* param){
 	vector<uni_factor*> nodes; 
 	vector<bi_factor*> edges;
 	Float hit = 0.0;
 	Float N = 0.0;
-    int n = 0;
-    stats = new Stats();
+	int n = 0;
+	stats = new Stats();
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
 		Instance* ins = *it_ins;
 		stats->construct_time -= get_current_time();
@@ -110,14 +113,14 @@ void struct_predict(Problem* prob, Param* param){
 		Float score = 0.0;
 		Float p_inf = 0.0;
 		//Float val = 0.0;
-        Float acc = 0.0;
-        stats->clear();
-        while (iter < max_iter){
+		Float acc = 0.0;
+		stats->clear();
+		while (iter < max_iter){
 			score = 0.0;
 			p_inf = 0.0;
 			//val = 0.0;
 			//nnz_msg = 0.0;
-            for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
+			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
 				uni_factor* node = *it_node;
 
 				stats->uni_search_time -= get_current_time();
@@ -128,14 +131,14 @@ void struct_predict(Problem* prob, Param* param){
 				node->subsolve();
 				stats->uni_subsolve_time += get_current_time();
 
-                prediction_time += get_current_time();
+				prediction_time += get_current_time();
 				score += node->score();
 				//val += node->func_val();
 				stats->uni_act_size += node->act_set.size();
 				stats->uni_ever_act_size += node->ever_act_set.size();
-                stats->num_uni++;
+				stats->num_uni++;
 				//node->display();
-                prediction_time -= get_current_time();
+				prediction_time -= get_current_time();
 			}
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
@@ -149,15 +152,15 @@ void struct_predict(Problem* prob, Param* param){
 				edge->subsolve();
 				stats->bi_subsolve_time += get_current_time();
 
-                prediction_time += get_current_time();
+				prediction_time += get_current_time();
 				score += edge->score();
 				//val += edge->func_val();
 				stats->bi_act_size += edge->act_set.size();
-                stats->num_bi++;
+				stats->num_bi++;
 				p_inf += edge->infea();
-                //nnz_msg += edge->nnz_msg();
-                //edge->display();
-                prediction_time -= get_current_time();
+				//nnz_msg += edge->nnz_msg();
+				//edge->display();
+				prediction_time -= get_current_time();
 			}
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
@@ -166,38 +169,39 @@ void struct_predict(Problem* prob, Param* param){
 				edge->update_multipliers();
 				stats->maintain_time += get_current_time();
 			}
- 
-			if (p_inf < 1e-3)
+
+			if (p_inf < param->infea_tol)
 				break;
-			
+
 			iter++;
 		}
-        n++;
-        //nnz_msg /= edges.size()*(iter+1);
-        
-        prediction_time += get_current_time();
-        acc = compute_acc(ins, nodes);
-        prediction_time -= get_current_time();
-        
-        cerr << "@" << n 
-            << ": iter=" << iter 
-            << ", acc=" << acc
-            << ", score=" << score 
-            << ", infea=" << p_inf;
+		n++;
+		//nnz_msg /= edges.size()*(iter+1);
 
-        stats->display();
-        cerr << endl;
-        
+		prediction_time += get_current_time();
+		acc = compute_acc(ins, nodes);
+		prediction_time -= get_current_time();
+
+		cerr << "@" << n 
+			<< ": iter=" << iter 
+			<< ", acc=" << acc
+			<< ", score=" << score 
+			<< ", infea=" << p_inf;
+
+		stats->display();
+
 		hit += acc*ins->T;
 		N += ins->T;
+		cerr << ", Acc=" << hit/N << endl;
+		cerr << endl;
 	}
 	cerr << "uni_search=" << stats->uni_search_time
 		<< ", uni_subsolve=" << stats->uni_subsolve_time
 		<< ", bi_search=" << stats->bi_search_time
 		<< ", bi_subsolve=" << stats->bi_subsolve_time 
 		<< ", maintain=" << stats->maintain_time 
-		<< ", construct=" << stats->construct_time 
-		<< ", Acc=" << hit/N << endl;
+		<< ", construct=" << stats->construct_time << endl; 
+	return (double)hit/(double)N;
 }
 
 Float Viterbi_predict(ChainProblem* prob, Param* param){
@@ -251,13 +255,13 @@ Float Viterbi_predict(ChainProblem* prob, Param* param){
 
 		//compute accuracy
 		
-		//int temp_hit = hit;
+		int temp_hit = hit;
 		for(Int t=0;t<ins->T;t++){
 			if( pred[t] == ins->labels[t] )
 				hit++;
 		}
 
-		//cerr << (double)(hit-temp_hit)/(seq->T) << endl;
+		cerr << (double)(hit-temp_hit)/(ins->T) << endl;
 
 		for(Int t=0; t<ins->T; t++){
 			delete[] max_sum[t];
@@ -288,7 +292,7 @@ int main(int argc, char** argv){
         int K = ((ChainProblem*)prob)->K; 
 		cerr << "prob.D=" << D << endl;
 		cerr << "prob.K=" << K << endl;
-        cerr << "prob.nnz(v)=" << nnz( ((ChainProblem*)prob)->v, K, K, 1e-12 ) << endl; 
+        	cerr << "prob.nnz(v)=" << nnz( ((ChainProblem*)prob)->v, K, K, 1e-12 ) << endl; 
 	}
 	
 	cerr << "prob.N=" << prob->data.size() << endl;
@@ -299,9 +303,12 @@ int main(int argc, char** argv){
 	prediction_time = -get_current_time();
 	if (param->solver == 0){
 		cerr << "Acc=" << Viterbi_predict((ChainProblem*)prob, param) << endl;
-	} else {
-		//cerr << "Acc=" << compute_acc_sparseLP(model, prob) << endl;
-		struct_predict(prob, param);
+	} 
+	if (param->solver == 1){
+		cerr << "Acc=" << compute_acc_sparseLP(prob) << endl;
+	}
+	if (param->solver == 2){
+		cerr << "Acc=" << struct_predict(prob, param) << endl;
 	}
 	prediction_time += get_current_time();
 	cerr << "prediction time=" << prediction_time << endl;

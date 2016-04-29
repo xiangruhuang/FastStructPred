@@ -10,8 +10,9 @@
 #include <iomanip>
 #include <omp.h>
 #include "LPutil.h"
-#include "model.h"
+//#include "model.h"
 //#include "CG.h"
+#include "problem.h"
 #include "util.h"
 
 using namespace std;
@@ -260,9 +261,9 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		if( PGmax_old <= 0.0 )
 			PGmax_old = 1e300;
 		
-		if( PGmax_new <= param.tol_sub ){ //reach stopping criteria
+		if( PGmax_new <= param.tol_sub || iter == inner_max_iter ){ //reach stopping criteria
 			
-			cerr << "stop at " << "iter=" << iter << ", act=" << active_size << "/" << (n+nf) << ", gmax=" << PGmax_new << endl;
+			cerr << "\tinner rcd iter=" << iter << ", act=" << active_size << "/" << (n+nf) << ", gmax=" << PGmax_new << endl;
 			break;
 		}
 	}
@@ -363,25 +364,6 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			for(int j=0;j<n+nf;j++)
 				obj += c[j]*x[j];
 			
-			/*Int T = 31, K = 45;
-			Int jj = 0;
-			for(int j = 0; j < 2*K; j++){
-				if (j % K == 0 && j != 0){
-					cerr << endl;
-					cerr << endl;
-					for (int k1 = 0; k1 <= K; k1++){	
-						for (int k2 = 0; k2 <= K; k2++){
-							cerr << x[T*K+jj*K*K+k1*K+k2] << " ";
-						}
-						cerr << endl;
-					}
-					jj++;
-					cerr << endl;
-				}
-				cerr << x[j] << " ";
-			}
-			cerr << endl;
-			*/
 			pinf = primal_inf(n,nf,m,me,x,A,b);
 			dinf = dual_inf(n,nf,m,me,w,At,c,eta_t);
 			gap = duality_gap(n,nf,m,me,x,w,c,b,eta_t);
@@ -393,6 +375,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 		}
 		
 		if( pinf<=param.tol && dinf<=param.tol ){
+			cerr << "iter=" << t << ", nnz=" << nnz;
 			break;
 		}
 		
@@ -418,7 +401,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			
 			phase = 2;
 			print_per_iter = 1;
-			cerr << "phase = 2" << endl;
+			//cerr << "phase = 2" << endl;
 			inner_max_iter = 100;
 		}
 		
@@ -500,16 +483,29 @@ class LP_Problem{
 	}
 };
 
-LP_Problem* construct_LP(Model* model, Instance* ins){
+LP_Problem* construct_LP(Instance* ins){
 	LP_Problem* ins_pred_prob = new LP_Problem();
-	Int T = ins->T, K = model->K;
+	int T = ins->T;
 
 	//for i-th unigram factor(numbered i), we have K variables, numbered K*i+{0..K-1}
 	//for i-th bigram factor( (T+i)-th factor ), we have K*K variables, numbered T*K + K*K*i+(k1*K+k2)
 	int m = 0; // no inequality
 	int nf = 0; // no unconstrainted x
-	int n = T*K + (T - 1)*K*K; // number of non-negative variables
-	int me = T + ins->edges.size() * (2 * K); // number of equality constraints
+	int n = 0; //T*K + (T - 1)*K*K; // number of non-negative variables
+	int me = 0; //T + ins->edges.size() * (2 * K); // number of equality constraints
+	
+	for (int i = 0; i < ins->T; i++){
+		n += ins->node_label_lists[i]->size();
+		me++;
+	}
+	
+	for (vector<pair<int, int>>::iterator e = ins->edges.begin(); e != ins->edges.end(); e++){
+		int i = e->first, j = e->second;
+		int K1 = ins->node_label_lists[i]->size();
+		int K2 = ins->node_label_lists[j]->size();
+		n += K1*K2;
+		me += (K1+K2);
+	}
 	
 	ins_pred_prob->m = m;
 	ins_pred_prob->nf = nf;
@@ -522,38 +518,45 @@ LP_Problem* construct_LP(Model* model, Instance* ins){
 	int row = 0;
 	
 	//construct constraints of unigram factors
+	int* offset = new int[T + ins->edges.size() + 1];
+	offset[0] = 0;
 	for (int i = 0; i < T; i++){
+		int K = ins->node_label_lists[i]->size();
 		// \sum_{k=0}^{K} alpha_i(k) = 1.0
 		for (int k = 0; k < K; k++){
-			A[row].push_back(make_pair(i*K+k, 1.0));
+			A[row].push_back(make_pair(offset[i]+k, 1.0));
 		}
 		b[row++] = 1.0;
+		offset[i+1] = offset[i] + K;
 	}
 	
 	//construct constraints of bigram factors
-	Int edge_count = 0;
-	for (vector<pair<Int, Int>>::iterator e = ins->edges.begin(); e != ins->edges.end(); e++, edge_count++){
-		Int i = e->first, j = e->second;
+	int edge_count = 0;
+	for (vector<pair<int, int>>::iterator e = ins->edges.begin(); e != ins->edges.end(); e++, edge_count++){
+		int i = e->first, j = e->second;
 		//we are inside bigram factor (i,j), assume (i < j)
 		assert(i < j && j < T /* node id should be in [T] */);
 
 		//for each k1, alpha_i(k1) = \sum_{k2=0}^K beta_{(i,j)}(k1, k2)
-		for (Int k1 = 0; k1 < K; k1++){
-			for (Int k2 = 0; k2 < K; k2++){
-				A[row].push_back(make_pair(T*K + edge_count*K*K + k1*K + k2, 1.0));
+		int K1 = ins->node_label_lists[i]->size();
+		int K2 = ins->node_label_lists[j]->size();
+		for (Int k1 = 0; k1 < K1; k1++){
+			for (Int k2 = 0; k2 < K2; k2++){
+				A[row].push_back(make_pair(offset[T+edge_count] + k1*K2 + k2, 1.0));
 			}
-			A[row].push_back(make_pair(i*K+k1, -1.0));
+			A[row].push_back(make_pair(offset[i]+k1, -1.0));
 			b[row++] = 0.0;
 		}
 		
 		//for each k2, alpha_j(k2) = \sum_{k1=0}^K beta_{(i,j)}(k1, k2)
-		for (Int k2 = 0; k2 < K; k2++){
-			for (Int k1 = 0; k1 < K; k1++){
-				A[row].push_back(make_pair(T*K + edge_count*K*K + k1*K + k2, 1.0));
+		for (Int k2 = 0; k2 < K2; k2++){
+			for (Int k1 = 0; k1 < K1; k1++){
+				A[row].push_back(make_pair(offset[T+edge_count] + k1*K2 + k2, 1.0));
 			}
-			A[row].push_back(make_pair(j*K+k2, -1.0));
+			A[row].push_back(make_pair(offset[j]+k2, -1.0));
 			b[row++] = 0.0;
 		}
+		offset[T + edge_count + 1] = offset[T + edge_count] + K1 * K2;
 	}
 	
 	assert(row == m + me);
@@ -566,23 +569,24 @@ LP_Problem* construct_LP(Model* model, Instance* ins){
 
 	//compute cost vector
 	memset(c, 0.0, sizeof(double)*(n+nf));
+
 	//unigram
 	for (int i = 0; i < T; i++){
-		for (SparseVec::iterator it=ins->features[i]->begin(); it != ins->features[i]->end(); it++){
-			Float* wj = model->w[it->first];
-			for (int k = 0; k < K; k++){
-				c[i*K+k] -= wj[k]*it->second;
-			}
+		int K = ins->node_label_lists[i]->size();
+		Float* ci = ins->node_score_vecs[i];
+		for (int k = 0; k < K; k++){
+			c[offset[i]+k] = (double)ci[k];
 		}
 	}
 	//bigram
 	edge_count = 0;
 	for (vector<pair<Int, Int>>::iterator e = ins->edges.begin(); e != ins->edges.end(); e++, edge_count++){
-		Int i = e->first, j = e->second;
-		for (Int k1 = 0; k1 < K; k1++){
-			for (Int k2 = 0; k2 < K; k2++){
-				c[T*K+edge_count*K*K+k1*K+k2] = -model->v[k1][k2];
-			}
+		int i = e->first, j = e->second;
+		int K1 = ins->node_label_lists[i]->size();
+		int K2 = ins->node_label_lists[j]->size();
+		Float* cij = ins->edge_score_vecs[edge_count]->c;
+		for (int k1k2 = 0; k1k2 < K1*K2; k1k2++){
+			c[offset[T+edge_count] + k1k2] = (double)cij[k1k2];
 		}
 	}
 
@@ -593,115 +597,44 @@ LP_Problem* construct_LP(Model* model, Instance* ins){
 	return ins_pred_prob;
 }
 
-//return the prediction in pred
-void LPpredict(Model* model, Instance* ins, Int* pred){
+double LPpredict(Instance* ins){
 	//construct prediction problem for this instance
-	LP_Problem* ins_pred_prob = construct_LP(model, ins);
+	LP_Problem* ins_pred_prob = construct_LP(ins);
 	
 	ins_pred_prob->solve();
 
-	//compute score of relaxed solution
-	/*Float score = 0.0;
-	for (Int i = 0; i < ins_pred_prob->n+ins_pred_prob->nf; i++){
-		score += ins_pred_prob->c[i]*ins_pred_prob->x[i];
-	}
-	
-	cerr << "relaxed score=" << score << endl;
-	*/
-
 	//Rounding
-	Int K = model->K, T = ins->T;
+	int T = ins->T;
 	double* x = ins_pred_prob->x;
+	double hit = 0.0;
+	int offset = 0;
 	for (int i = 0; i < T; i++){
-		//i*K+0 to i*K+T-1 is a prob distribution, draw a sample from it
-		pred[i] = -1;
-		double r = (double)rand()/RAND_MAX; // draw from [0, 1] uniformly
-		for (int k = 0; k < K; k++){
-			if (r <= x[i*K+k]){
-				pred[i] = k;
-				break;
-			} else {
-				r -= x[i*K+k];
-			}
-		}
-		assert(pred[i] != -1);
+		int true_label = ins->labels[i];
+		int K = ins->node_label_lists[i]->size();
+		//offset+0 to offset+K-1 is a prob distribution
+		hit += x[offset+true_label];
+		offset += K;
 	}
 	
-	/*score = 0.0;
-	for (Int i = 0; i < ins->T; i++){
-		score += ins_pred_prob->c[i*K+pred[i]];
-	}
-	for (Int i = 1; i < ins->T; i++){
-		score += ins_pred_prob->c[T*K + (i-1)*K*K + pred[i-1]*K + pred[i]];
-	}*/
+	return hit/T;
 }
 
-Float compute_acc_sparseLP(Model* model, Problem* prob){
+double compute_acc_sparseLP(Problem* prob){
 	vector<Instance*>* data = &(prob->data);
-	Int N = 0;
-	Int hit = 0;
-	for (Int n = 0; n < data->size(); n++){
-		cerr << n << "/" << data->size() << endl;
+	double N = 0.0;
+	double hit = 0.0;
+	for (int n = 0; n < data->size(); n++){
+		cerr << "@" << n << ": ";
 		Instance* ins = data->at(n);
-		Int* pred = new Int[ins->T];
 		N += ins->T;
-		LPpredict(model, ins, pred);
+		double acc = LPpredict(ins);
+		double temp_hit = hit;
+		hit += acc*ins->T;
 
-		//compute score of pred and labels
-		/*Float score = 0.0;
-		for (Int i = 0; i < ins->T; i++){
-			for (SparseVec::iterator it = ins->features[i]->begin(); it != ins->features[i]->end(); it++){
-				score -= model->w[it->first][pred[i]] * it->second; 
-			}
-		}
-		
-		for (Int i = 1; i < ins->T; i++){
-			score -= model->v[pred[i-1]][pred[i]];
-		}
-
-		Int* labels = new Int[ins->T];	
-
-		for (Int i = 0; i < ins->T; i++){
-			string label = prob->label_name_list[ins->labels[i]];
-			labels[i] = -1;
-			for (Int j = 0; j < model->K; j++){
-				if (model->label_name_list->at(j) == label){
-					labels[i] = j;
-				}
-			}
-			assert(labels[i] != -1);
-		}
-
-		Float score2 = 0.0;
-		for (Int i = 0; i < ins->T; i++){
-			for (SparseVec::iterator it = ins->features[i]->begin(); it != ins->features[i]->end(); it++){
-				score2 -= model->w[it->first][labels[i]] * it->second; 
-			}
-		}
-		
-		for (Int i = 1; i < ins->T; i++){
-			score2 -= model->v[labels[i-1]][labels[i]];
-		}
-		
-		cerr << "score(pred)=" << score << ", score(labels)=" << score2 << endl;
-
-		delete[] labels;
-		*/
-		
-		//compute #hit
-		int temp_hit = hit;
-		for (Int i = 0; i < ins->T; i++){
-			if (model->label_name_list->at(pred[i]) == prob->label_name_list[ins->labels[i]]){
-				hit++;
-			}
-		}
-
-		cerr << "acc=" << ((double)(hit-temp_hit)/ins->T) << endl;
-
-		delete[] pred;
+		cerr << ", acc=" << ((hit-temp_hit)/ins->T) << endl;
 	}
 	
-	return (Float)hit/N;
+	return hit/N;
 }
 
 
