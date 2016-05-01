@@ -1,9 +1,10 @@
 FLAG= -fopenmp -std=c++11 -O3 -w
-CC=g++
+CC=g++-4.8
 
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
+data_dir=.
 s=2
 m=10000
 q=1
@@ -17,25 +18,28 @@ rho=1
 eta=1
 infea_tol=1e-3
 
+.PHONY:pos
+
 pos:
-	$(eval test_file := /scratch/cluster/ianyen/data/POS/wsj.pos.crf.$(scale))
+	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
 	$(eval model := model)
 	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model)
 
+tmp:
+	$(eval test_file := $(data_dir)/POS/pos.tmp)
+	$(eval model := model)
+	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
+
 OCR.fea:
-	$(eval test_file := /scratch/cluster/ianyen/data/ChineseOCR/data.fea.$(scale))
+	$(eval test_file := $(data_dir)/ChineseOCR/data.fea.$(scale))
 	$(eval model := $(@).model)
 	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model) 
 	
 OCR.fea.tmp:
-	$(eval test_file := OCR.fea.test)
+	$(eval test_file := $(data_dir)/ChineseOCR/OCR.fea.test)
 	$(eval model := OCR.fea.model)
 	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model) 
 
-#tmp:
-#	$(eval test_file := pos.tmp)
-#	$(eval model := model)
-#	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 #
 #speech:
 #	$(eval train_file := /scratch/cluster/ianyen/data/speech/speech.$(scale))

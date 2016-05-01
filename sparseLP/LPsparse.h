@@ -38,18 +38,16 @@ class LP_Param{
 		solve_from_dual = false;
 		use_CG = false;
 		
-		tol = 1e-2;
-		//tol_trans = 10*tol;
-		tol_trans = 1;
+		tol = 1e-4;
+		tol_trans = 10*tol;
+		//tol_trans = 0.1;
 		tol_sub = 0.5*tol_trans;
 		
 		eta = 1.0;
-		nnz_tol = 1e-4;
+		nnz_tol = 1e-5;
 		max_iter = 1000;
 	}
-};	
-
-LP_Param param;
+};
 
 //this heap maintains gradient of candidates of active set (currently not active), thus x_j = 0 \forall j
 // gradient_j = c[j] + eta_t(<A^I_t[j], [w^I]_+>, <A^E_t[j], w^E> )
@@ -68,7 +66,7 @@ LP_Param param;
  *  min c'x + \frac{eta_t}{2}\| (Ax-b+alpha_t/eta_t)_+ \|^2 + \frac{eta_t}{2}\|Aeq*x-t*beq+beta_t/eta_t\|^2
  *  s.t. x >= 0
  */
-void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, double* x, double* w, double* h2_jj, double* hjj_ubound, double eta_t, int& niter, int inner_max_iter, int& active_matrix_size, double& PGmax_old_last, int phase){
+void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, double* x, double* w, double* h2_jj, double* hjj_ubound, double eta_t, int& niter, int inner_max_iter, int& active_matrix_size, double& PGmax_old_last, int phase, LP_Param* param){
 	int max_num_linesearch = 20;
 	double sigma = 0.01; //for line search, find smallest t \in {0,1,2,3...} s.t.
 			     // F(x+beta^t*d)-F(x) <= sigma * beta^t g_j*d
@@ -248,7 +246,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 				//cerr << "reach max_num_linesearch" << endl;
 				return;
 			}
-			
+		    //cerr << "updating j=" << j << ", d=" << d << endl;	
 			//update x_j
 			x[j] += d;
 		}
@@ -261,7 +259,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		if( PGmax_old <= 0.0 )
 			PGmax_old = 1e300;
 		
-		if( PGmax_new <= param.tol_sub || iter == inner_max_iter ){ //reach stopping criteria
+		if( PGmax_new <= param->tol_sub || iter == inner_max_iter ){ //reach stopping criteria
 			
 			cerr << "\tinner rcd iter=" << iter << ", act=" << active_size << "/" << (n+nf) << ", gmax=" << PGmax_new << endl;
 			break;
@@ -286,11 +284,11 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
  *       Aeq x = beq
  *       x >= 0
  */
-void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, double* c, double*& x, double*& w){
+void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, double* c, double*& x, double*& w, LP_Param* param){
 	
-	double eta_t = param.eta;
-	int max_iter = param.max_iter;
-	
+	double eta_t = param->eta;
+	int max_iter = param->max_iter;
+
 	for(int j=0;j<n+nf;j++)
 		x[j] = 0.0;
 	//w_t=Ax-b+w_{t-1}, v=Aeq*x-beq+ v_{t-1}
@@ -342,12 +340,12 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 	for(int t=0;t<max_iter;t++){
 		if( phase == 1 ){
 			inner_max_iter = (active_nnz!=0)?(nnz_A/active_nnz):(n+nf);
-			//inner_max_iter = 1;
-			rcd(n,nf,m,me, At,b,c,  x, w, h2_jj, hjj_ubound, eta_t, niter, inner_max_iter, active_nnz, PGmax_old, phase);
+			//inner_max_iter = 10000;
+			rcd(n,nf,m,me, At,b,c,  x, w, h2_jj, hjj_ubound, eta_t, niter, inner_max_iter, active_nnz, PGmax_old, phase, param);
 			
 		}else if( phase == 2 ){
 			
-			rcd(n,nf,m,me, At,b,c,  x, w, h2_jj, hjj_ubound, eta_t, niter, inner_max_iter, active_nnz, PGmax_old, phase);
+			rcd(n,nf,m,me, At,b,c,  x, w, h2_jj, hjj_ubound, eta_t, niter, inner_max_iter, active_nnz, PGmax_old, phase, param);
 			
 			//cerr << endl;
 		}
@@ -357,7 +355,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 
 			nnz = 0;
 			for(int j=0;j<n+nf;j++)
-				if( x[j] > param.nnz_tol )
+				if( x[j] > param->nnz_tol )
 					nnz++;
 			
 			obj = 0.0;
@@ -374,8 +372,8 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			//cerr << endl;
 		}
 		
-		if( pinf<=param.tol && dinf<=param.tol ){
-			cerr << "iter=" << t << ", nnz=" << nnz;
+		if( pinf<=param->tol && dinf<=param->tol ){
+			cerr << "iter=" << t << ", nnz=" << nnz << ", pinf=" << pinf << ", dinf=" << dinf;
 			break;
 		}
 		
@@ -397,19 +395,19 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 				w[it->first] += tmp * it->second;
 		}
 	
-		if( phase == 1 && pinf <= param.tol_trans ){
+		/*if( phase == 1 && pinf <= param->tol_trans ){
 			
 			phase = 2;
 			print_per_iter = 1;
 			//cerr << "phase = 2" << endl;
-			inner_max_iter = 100;
+			inner_max_iter = 1000;
 		}
 		
 		if( phase == 2 ){
 			
 			if( (niter < 2) || (pinf < 0.5*dinf && dinf>dinf_last) ){
 				
-				if(niter < inner_max_iter) param.tol_sub *= 0.5;
+				if(niter < inner_max_iter) param->tol_sub *= 0.5;
 				else			   inner_max_iter = min(inner_max_iter*2, 10000);
 				
 			}
@@ -442,12 +440,12 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 					w[i] /= 2;
 			}
 			
-		}
+		}*/
 		dinf_last = dinf;
 		pinf_last = pinf;
 		gap_last = gap;
 	}
-	param.eta = eta_t;
+	param->eta = eta_t;
 }
 
 //a template/wrapper used to cache shared parts of each sample, such as A & At
@@ -464,9 +462,14 @@ class LP_Problem{
 	
 	double* x;
 	double* y;
+    LP_Param* param;
+
+    LP_Problem(){
+        param = new LP_Param();
+    }
 
 	void solve(){
-		LPsolve(n,nf,m,me, A,At,b,c,  x, y);
+		LPsolve(n, nf, m, me, A, At, b, c, x, y, param);
 	}
 	
 	~LP_Problem(){
@@ -483,10 +486,11 @@ class LP_Problem{
 	}
 };
 
-LP_Problem* construct_LP(Instance* ins){
+LP_Problem* construct_LP(Instance* ins, Param* param){
 	LP_Problem* ins_pred_prob = new LP_Problem();
+    ins_pred_prob->param->eta = param->rho;
 	int T = ins->T;
-
+    
 	//for i-th unigram factor(numbered i), we have K variables, numbered K*i+{0..K-1}
 	//for i-th bigram factor( (T+i)-th factor ), we have K*K variables, numbered T*K + K*K*i+(k1*K+k2)
 	int m = 0; // no inequality
@@ -558,7 +562,9 @@ LP_Problem* construct_LP(Instance* ins){
 		}
 		offset[T + edge_count + 1] = offset[T + edge_count] + K1 * K2;
 	}
-	
+
+    cerr << "T=" << T << ", n=" << n << ", nf=" << nf << ", m=" << m << ", me=" << me << endl;
+
 	assert(row == m + me);
 	
 	ConstrInv* At = new ConstrInv[n+nf];
@@ -597,9 +603,9 @@ LP_Problem* construct_LP(Instance* ins){
 	return ins_pred_prob;
 }
 
-double LPpredict(Instance* ins){
+double LPpredict(Instance* ins, Param* param){
 	//construct prediction problem for this instance
-	LP_Problem* ins_pred_prob = construct_LP(ins);
+	LP_Problem* ins_pred_prob = construct_LP(ins, param);
 	
 	ins_pred_prob->solve();
 
@@ -608,13 +614,33 @@ double LPpredict(Instance* ins){
 	double* x = ins_pred_prob->x;
 	double hit = 0.0;
 	int offset = 0;
+    cerr << endl;
 	for (int i = 0; i < T; i++){
 		int true_label = ins->labels[i];
 		int K = ins->node_label_lists[i]->size();
 		//offset+0 to offset+K-1 is a prob distribution
 		hit += x[offset+true_label];
+        for (int k = 0; k < K; k++){
+            if (fabs(x[offset+k])>1e-3){
+                cerr << k << ":" << x[offset+k] << " ";
+            }
+        }
+        cerr << endl;
 		offset += K;
 	}
+    for (int e = 0; e < ins->edges.size(); e++){
+        int i = ins->edges[e].first, j = ins->edges[e].second;
+		int K1 = ins->node_label_lists[i]->size();
+		int K2 = ins->node_label_lists[j]->size();
+        for (int k1 = 0; k1 < K1; k1++){
+            for (int k2 = 0; k2 < K2; k2++){
+                int k1k2 = k1*K2 + k2;
+                if (fabs(x[offset + k1k2]) > 1e-3)
+                    cerr << "(" << k1 << "," << k2 << "):" << x[offset + k1k2] << " ";
+            }
+        }
+        cerr << endl;
+    }
 	
 	return hit/T;
 }
@@ -627,7 +653,7 @@ double compute_acc_sparseLP(Problem* prob){
 		cerr << "@" << n << ": ";
 		Instance* ins = data->at(n);
 		N += ins->T;
-		double acc = LPpredict(ins);
+		double acc = LPpredict(ins, prob->param);
 		double temp_hit = hit;
 		hit += acc*ins->T;
 

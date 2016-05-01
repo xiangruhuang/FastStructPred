@@ -18,6 +18,7 @@ class Param{
 		Float eta, rho;
 		string type; // problem type
 		Float infea_tol; // tolerance of infeasibility
+        Float grad_tol; // stopping condition for gradient
 
 		Param(){
 			solver = 0;
@@ -28,6 +29,7 @@ class Param{
 			modelFname = NULL;
 			type = "chain";
 			infea_tol = 1e-3;
+            grad_tol = 1e-3;
 		}
 };
 

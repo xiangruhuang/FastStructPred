@@ -82,12 +82,11 @@ inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& n
 
 inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
 
-	int node_count = 0;
-	int hit = 0;
-	int N = 0;
+	Float hit = 0;
 	//for this instance
 
 	//compute hits
+	int node_count = 0;
 	for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){	
 		uni_factor* node = *it_node;
 		//Rounding
@@ -95,6 +94,7 @@ inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
 	}
 	return (Float)hit/ins->T;
 }
+
 
 double struct_predict(Problem* prob, Param* param){
 	vector<uni_factor*> nodes; 
@@ -107,21 +107,26 @@ double struct_predict(Problem* prob, Param* param){
 		Instance* ins = *it_ins;
 		stats->construct_time -= get_current_time();
 		construct_factor(ins, param, nodes, edges);
+        int* node_indices = new int[nodes.size()];
+        for (int i = 0; i < nodes.size(); i++)
+            node_indices[i] = i;
+        int* edge_indices = new int[edges.size()];
+        for (int i = 0; i < edges.size(); i++)
+            edge_indices[i] = i;
 		stats->construct_time += get_current_time();
 		int iter = 0;
 		int max_iter = param->max_iter;
-		Float score = 0.0;
-		Float p_inf = 0.0;
+		Float score, p_inf, d_inf, acc;
 		//Float val = 0.0;
-		Float acc = 0.0;
 		stats->clear();
+        int countdown = 0;
 		while (iter < max_iter){
 			score = 0.0;
-			p_inf = 0.0;
 			//val = 0.0;
 			//nnz_msg = 0.0;
-			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++){
-				uni_factor* node = *it_node;
+            //random_shuffle(node_indices, node_indices+nodes.size());
+			for (int n = 0; n < nodes.size(); n++){
+				uni_factor* node = nodes[node_indices[n]];
 
 				stats->uni_search_time -= get_current_time();
 				node->search();
@@ -137,13 +142,14 @@ double struct_predict(Problem* prob, Param* param){
 				stats->uni_act_size += node->act_set.size();
 				stats->uni_ever_act_size += node->ever_act_set.size();
 				stats->num_uni++;
-				//node->display();
 				prediction_time -= get_current_time();
 			}
 
-			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
-				bi_factor* edge = *it_edge;
-
+			p_inf = 0.0;
+            //random_shuffle(edge_indices, edge_indices+edges.size());
+			for (int e = 0; e < edges.size(); e++){
+				bi_factor* edge = edges[edge_indices[e]];
+                
 				stats->bi_search_time -= get_current_time();
 				edge->search();
 				stats->bi_search_time += get_current_time();
@@ -155,11 +161,12 @@ double struct_predict(Problem* prob, Param* param){
 				prediction_time += get_current_time();
 				score += edge->score();
 				//val += edge->func_val();
-				stats->bi_act_size += edge->act_set.size();
+                stats->bi_act_size += edge->act_set.size();
 				stats->num_bi++;
-				p_inf += edge->infea();
+				Float inf = edge->infea();
+                if (inf > p_inf)
+                    p_inf = inf;
 				//nnz_msg += edge->nnz_msg();
-				//edge->display();
 				prediction_time -= get_current_time();
 			}
 
@@ -170,9 +177,66 @@ double struct_predict(Problem* prob, Param* param){
 				stats->maintain_time += get_current_time();
 			}
 
-			if (p_inf < param->infea_tol)
-				break;
-
+            //compute primal inf & dual inf
+            
+            //cerr << "==========================" << endl;
+            d_inf = 0.0; int dinf_index = -1; int dinf_factor_index = -1;
+            int node_count = 0;
+			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){
+				uni_factor* node = *it_node;
+                Float gmax_node = node->dual_inf();
+                if (gmax_node > d_inf){
+                    d_inf = gmax_node;
+                    dinf_index = node->dinf_index;
+                    dinf_factor_index = node_count;
+                    //cerr << setprecision(10) << "node" << node_count << ":" << d_inf << ", act_size=" << node->act_set.size() << ", k=" << dinf_index << ", y=" << node->y[dinf_index] << ", grad=" << node->grad[dinf_index] << endl;
+                }
+            }
+           
+            int edge_count = 0;
+			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++, edge_count++){
+				bi_factor* edge = *it_edge;
+                Float gmax_edge = edge->dual_inf();
+                if (gmax_edge > d_inf){
+                    d_inf = gmax_edge;
+                    dinf_index = edge->dinf_index;
+                    dinf_factor_index = edge_count + nodes.size();
+                    //cerr << "edge" << edge_count << " " << d_inf << endl;
+                }
+            }
+            Float g = 0.0;  
+            if (dinf_factor_index != -1){
+                if (dinf_factor_index >= nodes.size()){
+                    edge_count = dinf_factor_index - nodes.size();
+                    bi_factor* edge = edges[edge_count];
+                    int k1k2 = dinf_index;
+                    int k1 = k1k2 / edge->K2, k2 = k1k2 % edge->K2;
+                    g = -(edge->c[dinf_index] + edge->msgl[k1] + edge->msgr[k2]);
+                } else {
+                    g = nodes[dinf_factor_index]->grad[dinf_index];
+                }
+            }
+            //cerr << ", d_inf=" << d_inf << ", dinf_factor=" << dinf_factor_index << ", k=" << dinf_index << ", grad=" << g << endl;
+            //cerr << "==========================" << endl;
+            //cerr << ", grad[997]=" << nodes[1]->grad[997] << ", grad[429]=" << nodes[1]->grad[429] << endl;
+            //if (nodes[1]->searched_index != -1){
+                //cerr << ", searched_index=" << nodes[1]->searched_index << ", gmax=" << nodes[1]->grad[nodes[1]->searched_index] << endl;
+            //}
+            //cerr << ", msgl[429]=" << edges[1]->msgl[429] << ", msgl[997]=" << edges[1]->msgl[997];
+            //cerr << ", msgr[1163]=" << edges[1]->msgr[1163];
+            //nodes[1]->display();
+			if (p_inf < param->infea_tol && d_inf < param->grad_tol){
+				countdown++;
+            }
+            if (countdown >= 10){
+                break;
+            }
+            /*if (iter > 10){
+                if (!edges[1]->inside[997*3039+1163]){
+                    edges[1]->act_set.push_back(make_pair(997*3039+1163, 0.0));
+                    edges[1]->inside[997*3039+1163]=true;
+                }
+            }*/
 			iter++;
 		}
 		n++;
@@ -186,14 +250,40 @@ double struct_predict(Problem* prob, Param* param){
 			<< ": iter=" << iter 
 			<< ", acc=" << acc
 			<< ", score=" << score 
-			<< ", infea=" << p_inf;
-
+			<< ", infea=" << p_inf
+            << ", dinf=" << d_inf;
+        cerr << "uni_search=" << stats->uni_search_time
+            << ", uni_subsolve=" << stats->uni_subsolve_time
+            << ", bi_search=" << stats->bi_search_time
+            << ", bi_subsolve=" << stats->bi_subsolve_time 
+            << ", maintain=" << stats->maintain_time 
+            << ", construct=" << stats->construct_time << endl; 
+        Float avg_act_size = 0.0;
+        for (int i = 0; i < nodes.size(); i++){
+            avg_act_size += nodes[i]->act_set.size();
+            //nodes[i]->display();
+            //if (i < 2)
+              //  edges[i]->display();
+        }
+        cerr << ", avg_act_size=" << avg_act_size / nodes.size();
 		stats->display();
+
+        /*
+        int y0, y1, y2;
+        y0=1570; y1=997; y2 = 1163;
+        cerr << "(y0,y1,y2)=(" << y0 << "," << y1 << "," << y2 << ")" << ": c0=" << nodes[0]->c[y0] << ", v0=" << edges[0]->c[y0*3039 + y1] << ", c1=" << nodes[1]->c[y1] << ", v1=" << edges[0]->c[y1*3039 + y2] <<endl;
+        
+        y0=1570; y1=429; y2 = 1163;
+        cerr << "(y0,y1,y2)=(" << y0 << "," << y1 << "," << y2 << ")" << ": c0=" << nodes[0]->c[y0] << ", v0=" << edges[0]->c[y0*3039 + y1] << ", c1=" << nodes[1]->c[y1] << ", v1=" << edges[0]->c[y1*3039 + y2] <<endl;
+        */
 
 		hit += acc*ins->T;
 		N += ins->T;
 		cerr << ", Acc=" << hit/N << endl;
 		cerr << endl;
+
+        delete[] node_indices;
+        delete[] edge_indices;
 	}
 	cerr << "uni_search=" << stats->uni_search_time
 		<< ", uni_subsolve=" << stats->uni_subsolve_time
@@ -259,7 +349,9 @@ Float Viterbi_predict(ChainProblem* prob, Param* param){
 		for(Int t=0;t<ins->T;t++){
 			if( pred[t] == ins->labels[t] )
 				hit++;
+            cerr << pred[t] << " ";
 		}
+        cerr << endl;
 
 		cerr << (double)(hit-temp_hit)/(ins->T) << endl;
 
