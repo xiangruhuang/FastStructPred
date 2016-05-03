@@ -103,8 +103,8 @@ double struct_predict(Problem* prob, Param* param){
 	Float N = 0.0;
 	int n = 0;
 	stats = new Stats();
-	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++){
-		Instance* ins = *it_ins;
+	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
+        Instance* ins = *it_ins;
 		stats->construct_time -= get_current_time();
 		construct_factor(ins, param, nodes, edges);
         int* node_indices = new int[nodes.size()];
@@ -116,15 +116,23 @@ double struct_predict(Problem* prob, Param* param){
 		stats->construct_time += get_current_time();
 		int iter = 0;
 		int max_iter = param->max_iter;
-		Float score, p_inf, d_inf, acc;
+		Float score, p_inf, d_inf, acc, nnz_msg;
 		//Float val = 0.0;
 		stats->clear();
         int countdown = 0;
+
+        vector<factor*> factor_seq;
+        for (int i = 0; i < ins->T; i++){
+            factor_seq.push_back(nodes[i]);
+            if (i < ins->T - 1)
+                factor_seq.push_back(edges[i]);
+        }
+
+		nnz_msg = 0.0;
 		while (iter < max_iter){
 			score = 0.0;
 			//val = 0.0;
-			//nnz_msg = 0.0;
-            //random_shuffle(node_indices, node_indices+nodes.size());
+            /*random_shuffle(node_indices, node_indices+nodes.size());
 			for (int n = 0; n < nodes.size(); n++){
 				uni_factor* node = nodes[node_indices[n]];
 
@@ -136,17 +144,9 @@ double struct_predict(Problem* prob, Param* param){
 				node->subsolve();
 				stats->uni_subsolve_time += get_current_time();
 
-				prediction_time += get_current_time();
-				score += node->score();
-				//val += node->func_val();
-				stats->uni_act_size += node->act_set.size();
-				stats->uni_ever_act_size += node->ever_act_set.size();
-				stats->num_uni++;
-				prediction_time -= get_current_time();
 			}
 
-			p_inf = 0.0;
-            //random_shuffle(edge_indices, edge_indices+edges.size());
+            random_shuffle(edge_indices, edge_indices+edges.size());
 			for (int e = 0; e < edges.size(); e++){
 				bi_factor* edge = edges[edge_indices[e]];
                 
@@ -158,23 +158,19 @@ double struct_predict(Problem* prob, Param* param){
 				edge->subsolve();
 				stats->bi_subsolve_time += get_current_time();
 
-				prediction_time += get_current_time();
-				score += edge->score();
-				//val += edge->func_val();
-                stats->bi_act_size += edge->act_set.size();
-				stats->num_bi++;
-				Float inf = edge->infea();
-                if (inf > p_inf)
-                    p_inf = inf;
-				//nnz_msg += edge->nnz_msg();
-				prediction_time -= get_current_time();
-			}
+			}*/
+
+            for (vector<factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++){
+                //cerr << "search" << endl;
+                (*f)->search();
+                //cerr << "subsolve" << endl;
+                (*f)->subsolve();
+                //cerr << "end" << endl;
+            }
 
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				bi_factor* edge = *it_edge;
-				stats->maintain_time -= get_current_time();
 				edge->update_multipliers();
-				stats->maintain_time += get_current_time();
 			}
 
             //compute primal inf & dual inf
@@ -191,9 +187,17 @@ double struct_predict(Problem* prob, Param* param){
                     dinf_factor_index = node_count;
                     //cerr << setprecision(10) << "node" << node_count << ":" << d_inf << ", act_size=" << node->act_set.size() << ", k=" << dinf_index << ", y=" << node->y[dinf_index] << ", grad=" << node->grad[dinf_index] << endl;
                 }
+				prediction_time += get_current_time();
+				score += node->score();
+				//val += node->func_val();
+				stats->uni_act_size += node->act_set.size();
+				stats->uni_ever_act_size += node->ever_act_set.size();
+				stats->num_uni++;
+				prediction_time -= get_current_time();
             }
            
             int edge_count = 0;
+            p_inf = 0.0;
 			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++, edge_count++){
 				bi_factor* edge = *it_edge;
                 Float gmax_edge = edge->dual_inf();
@@ -203,6 +207,16 @@ double struct_predict(Problem* prob, Param* param){
                     dinf_factor_index = edge_count + nodes.size();
                     //cerr << "edge" << edge_count << " " << d_inf << endl;
                 }
+				Float inf = edge->infea();
+                if (inf > p_inf)
+                    p_inf = inf;
+				prediction_time += get_current_time();
+				score += edge->score();
+				//val += edge->func_val();
+                stats->bi_act_size += edge->act_set.size();
+				stats->num_bi++;
+				nnz_msg += edge->nnz_msg();
+				prediction_time -= get_current_time();
             }
             Float g = 0.0;  
             if (dinf_factor_index != -1){
@@ -239,31 +253,46 @@ double struct_predict(Problem* prob, Param* param){
             }*/
 			iter++;
 		}
-		n++;
 		//nnz_msg /= edges.size()*(iter+1);
 
 		prediction_time += get_current_time();
 		acc = compute_acc(ins, nodes);
 		prediction_time -= get_current_time();
 
-		cerr << "@" << n 
-			<< ": iter=" << iter 
+		cerr << "@" << n
+			<< ": iter=" << iter
+            << ", T=" << ins->T
 			<< ", acc=" << acc
 			<< ", score=" << score 
 			<< ", infea=" << p_inf
-            << ", dinf=" << d_inf;
-        cerr << "uni_search=" << stats->uni_search_time
+            << ", dinf=" << d_inf
+            << ", avg_nnz_msg=" << nnz_msg / (iter+1) / edges.size();
+        
+        Float ever_act_size = 0;
+        for (int i = 0; i < nodes.size(); i++)
+            ever_act_size += nodes[i]->ever_act_set.size();
+        ever_act_size /= nodes.size();
+        cerr << ", ever_act_size=" << ever_act_size;
+
+        cerr << ", uni_search=" << stats->uni_search_time
             << ", uni_subsolve=" << stats->uni_subsolve_time
             << ", bi_search=" << stats->bi_search_time
             << ", bi_subsolve=" << stats->bi_subsolve_time 
             << ", maintain=" << stats->maintain_time 
             << ", construct=" << stats->construct_time << endl; 
         Float avg_act_size = 0.0;
+        Float tscore = 0.0;
         for (int i = 0; i < nodes.size(); i++){
             avg_act_size += nodes[i]->act_set.size();
+            //cerr << "true_label=" << ins->labels[i] << endl;
+            //tscore += nodes[i]->score();
+            //cerr << "tscore=" << tscore << ", c[k]=" << nodes[i]->c[nodes[i]->act_set[0]]<< " ";
             //nodes[i]->display();
-            //if (i < 2)
-              //  edges[i]->display();
+            //if (i < nodes.size()-1){
+            //    tscore += edges[i]->score();
+            //    cerr << "tscore=" << tscore << " ,score=" << edges[i]->score();
+            //    edges[i]->display();
+            //}
         }
         cerr << ", avg_act_size=" << avg_act_size / nodes.size();
 		stats->display();
@@ -321,21 +350,25 @@ Float Viterbi_predict(ChainProblem* prob, Param* param){
 		////Viterbi t=1...T-1
 		for(Int t=1; t<ins->T; t++){
 			//passing message from t-1 to t
+            Float* max_sum_t = max_sum[t];
+            Float* c = ins->edge_score_vecs[t-1]->c;
+            int offset = 0;
 			for(Int k1=0;k1<K;k1++){
 				Float tmp = max_sum[t-1][k1];
 				Float cand_val;
-				for (vector<pair<int, Float>>::iterator it = sparse_v[k1].begin(); it != sparse_v[k1].end(); it++){
-					Int k2 = it->first;
-					cand_val = tmp + it->second;
-					if( cand_val > max_sum[t][k2] ){
-						max_sum[t][k2] = cand_val;
+				for (int k2 = 0; k2 < K; k2++){
+                    cand_val = tmp - c[offset+k2];
+                    if( cand_val > max_sum_t[k2] ){
+						max_sum_t[k2] = cand_val;
 						argmax_sum[t][k2] = k1;
 					}
 				}
+                offset += K;
 			}
 			//adding unigram factor
+            Float* score_at_t = ins->node_score_vecs[t];
 			for(Int k2=0;k2<K;k2++)
-				max_sum[t][k2] -= ins->node_score_vecs[t][k2];
+				max_sum[t][k2] -= score_at_t[k2];
 		}
 		////Viterbi traceback
 		pred[ins->T-1] = argmax( max_sum[ins->T-1], K );
@@ -349,11 +382,10 @@ Float Viterbi_predict(ChainProblem* prob, Param* param){
 		for(Int t=0;t<ins->T;t++){
 			if( pred[t] == ins->labels[t] )
 				hit++;
-            cerr << pred[t] << " ";
+            //cerr << "t=" << t << ", pred=" << pred[t] << ", score=" << max_sum[t][pred[t]] << endl;
 		}
-        cerr << endl;
 
-		cerr << (double)(hit-temp_hit)/(ins->T) << endl;
+        cerr << "@" << n << ": acc=" << (double)(hit-temp_hit)/(ins->T) << " --- " << (Float)hit/N << ", score=" << max_sum[ins->T-1][pred[ins->T-1]]<< endl;
 
 		for(Int t=0; t<ins->T; t++){
 			delete[] max_sum[t];

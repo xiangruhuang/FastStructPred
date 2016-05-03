@@ -19,6 +19,7 @@ class Param{
 		string type; // problem type
 		Float infea_tol; // tolerance of infeasibility
         Float grad_tol; // stopping condition for gradient
+        Float nnz_tol; // threshold to shrink to zero
 
 		Param(){
 			solver = 0;
@@ -30,6 +31,7 @@ class Param{
 			type = "chain";
 			infea_tol = 1e-3;
             grad_tol = 1e-3;
+            nnz_tol = 1e-6;
 		}
 };
 

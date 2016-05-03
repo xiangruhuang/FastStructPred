@@ -46,6 +46,19 @@ class ScoreComp{
 	Float* score;
 };
 
+class ScoreCompInc{
+	
+	public:
+	ScoreCompInc(Float* _score){
+		score = _score;
+	}
+	bool operator()(const Int& ind1, const Int& ind2){
+		return score[ind1] < score[ind2];
+	}
+	private:
+	Float* score;
+};
+
 // Hash function [K] ->[m]
 
 class HashFunc{
