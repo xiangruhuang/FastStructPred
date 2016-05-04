@@ -1,9 +1,0 @@
-./predict -s 0 -o 1 -e 1 -m 1000 /scratch/cluster/ianyen/data/POS/wsj.pos.crf.tmp model 
-D=47124
-K=45
-prob.D=47081
-prob.K=35
-prob.N=20
-param.rho=1
-param.eta=1
-Acc=0.882812

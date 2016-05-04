@@ -81,6 +81,147 @@ class Problem{
 		}
 };
 
+class CompleteGraphProblem : public Problem{
+	public:
+		map<string, int> label_index_map;
+		vector<string> label_name_list;
+		map<int, uni_factor*> node_index_map;
+		int D, K, N;
+		Float** w;
+		Float** v;
+		Float* c;
+		void construct_data(){
+			node_index_map.clear();
+			label_index_map.clear();
+			label_index_list.clear();
+			ifstream fin(param->testFname);
+			char* line = new char[LINE_LEN];
+
+			Instance* ins = new Instance();
+			Int d = -1;
+			N = 0;
+			fin.getline(line, LINE_LEN);
+			string line_str(line);
+			vector<string> tokens = split(line_str, " ");
+			K = stoi(tokens[1]);
+			int num_nodes = stoi(tokens[0]);
+			for (int i = 0; i < num_nodes; i++){
+				fin.getline(line, LINE_LEN);
+				string line_str(line);
+				tokens = split(line_str, " ");
+				int node_ind = stoi(tokens[0]);
+				Float* c = new Float[K];
+				memset(c, 0.0, sizeof(Float)*K);
+				for (vector<string>::iterator t = tokens.begin(); t != tokens.end(); t++){
+					if (t == tokens.begin()){
+						continue;
+					}
+					vector<string> label_val = split(*t, ":");
+					map<string, int>::iterator it = label_index_map.find(label_val[0]);
+					int index;
+					if (it == label_index_map.end()){
+						index = label_index_map.size();
+						label_index_map.insert(make_pair(label_val[0], index));
+					} else {
+						index = it->second;
+					}
+					c[index] = stof(label_val[1]);
+				}
+				ins->node_score_vecs.push_back(c);
+				
+			}
+
+			for (int k1 = 0; k1 < K; k1++){
+				
+			}
+			while( !fin.eof() ){
+				fin.getline(line, LINE_LEN);
+				string line_str(line);
+
+				if( line_str.length() < 2 && fin.eof() ){
+					if(ins->labels.size()>0){
+						ins->T = ins->labels.size();
+						data.push_back(ins);
+						N++;
+					}
+					break;
+				}else if( line_str.length() < 2 ){
+					ins->T = ins->labels.size();
+					data.push_back(ins);
+					N++;
+					ins = new Instance();
+					continue;
+				}
+				vector<string> tokens = split(line_str, " ");
+				//get label index
+				Int lab_ind;
+				map<string,Int>::iterator it;
+				if(  (it=label_index_map.find(tokens[0])) == label_index_map.end() ){
+					lab_ind = label_index_map.size();
+					label_index_map.insert(make_pair(tokens[0],lab_ind));
+				}else
+					lab_ind = it->second;
+
+				SparseVec* x = new SparseVec();
+				for(Int i=1;i<tokens.size();i++){
+					vector<string> kv = split(tokens[i],":");
+					Int ind = atoi(kv[0].c_str());
+					Float val = atof(kv[1].c_str());
+					x->push_back(make_pair(ind,val));
+
+					if( ind > d )
+						d = ind;
+				}
+
+				//compute c = -W^T x
+				Float* c = new Float[K];
+				memset(c, 0.0, sizeof(Float)*K);
+				for (SparseVec::iterator it = x->begin(); it != x->end(); it++){
+					Float* wj = w[it->first];
+					for (int k = 0; k < K; k++)
+						c[k] -= wj[k]*it->second;
+				}
+				x->clear();
+
+
+				ins->node_score_vecs.push_back(c);
+				ins->labels.push_back(lab_ind);
+				int len = ins->labels.size();
+				if (len >= 2){
+					ins->edge_score_vecs.push_back(sv);
+					ins->edges.push_back(make_pair(len-2, len-1));
+				}
+			}
+			fin.close();
+
+			d += 1; //bias
+			if( D < d )
+				D = d;
+
+			for(Int i=0;i<data.size();i++)
+				data[i]->T = data[i]->labels.size();
+
+			label_name_list.resize(label_index_map.size());
+
+			for(map<string,Int>::iterator it=label_index_map.begin(); it!=label_index_map.end(); it++){
+				label_name_list[it->second] = it->first;
+			}
+
+			//propagate address of label name list to all nodes
+			for (vector<Instance*>::iterator it_data = data.begin(); it_data != data.end(); it_data++){
+				Instance* ins = *it_data;
+				for (int t = 0; t < ins->T; t++){
+					ins->node_label_lists.push_back(&(label_name_list));
+				}
+			}
+
+			K = label_index_map.size();
+
+			delete[] line;
+			
+		}
+}
+
 class ChainProblem : public Problem{
 
 	public:

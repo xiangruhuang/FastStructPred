@@ -4,7 +4,7 @@ CC=g++-4.8
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
-data_dir=.
+data_dir=/scratch/cluster/xrhuang/data/
 s=2
 m=10000
 q=1
@@ -19,6 +19,10 @@ eta=1
 infea_tol=1e-3
 
 .PHONY:pos
+
+107network:
+	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
+	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file)
 
 pos:
 	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
