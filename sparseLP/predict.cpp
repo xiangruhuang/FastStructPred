@@ -12,10 +12,13 @@ void exit_with_help(){
 	cerr << "-s solver: (default 0)" << endl;
 	cerr << "	0 -- Viterbi(chain)" << endl;
 	cerr << "	1 -- sparseLP" << endl;
+    cerr << "-p problem_type: " << endl;
+    cerr << "   chain -- sequence labeling problem" << endl;
+    cerr << "   network -- network matching problem" << endl;
 	cerr << "-e eta: GDMM step size" << endl;
 	cerr << "-o rho: coefficient/weight of message" << endl;
 	cerr << "-m max_iter: max number of iterations" << endl;
-	exit(0);
+    exit(0);
 }
 
 void parse_cmd_line(int argc, char** argv, Param* param){
@@ -28,18 +31,17 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 			exit_with_help();
 
 		switch(argv[i-1][1]){
-			
 			case 's': param->solver = atoi(argv[i]);
-				  break;
+				    break;
 			case 'e': param->eta = atof(argv[i]);
-				  break;
+				    break;
 			case 'o': param->rho = atof(argv[i]);
-				  break;
+				    break;
 			case 'm': param->max_iter = atoi(argv[i]);
-				  break;
-			case 't': param->infea_tol = atof(argv[i]);
-				  break;
-			default:
+				    break;
+            case 'p': param->problem_type = string(argv[i]);
+                    break;
+            default:
 				  cerr << "unknown option: -" << argv[i-1][1] << endl;
 				  exit(0);
 		}
@@ -62,13 +64,17 @@ inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& n
 	nodes.clear();
 	edges.clear();
 
+    //cerr << "constructing uniFactor";
 	//construct uni_factors
 	int node_count = 0;
 	for (int t = 0; t < ins->T; t++){
 		uni_factor* node = new uni_factor(ins->node_label_lists[t]->size(), ins->node_score_vecs[t], param);
 		nodes.push_back(node);
+    //    cerr << ".";
 	}
+    //cerr << endl;
 
+    //cerr << "constructing biFactor";
 	//construct bi_factors
 	for (int e = 0; e < ins->edges.size(); e++){
 		int e_l = ins->edges[e].first, e_r = ins->edges[e].second;
@@ -77,7 +83,11 @@ inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& n
 		uni_factor* r = nodes[e_r];
 		bi_factor* edge = new bi_factor(l, r, sv, param);
 		edges.push_back(edge);
+        //if (e % 100 == 0){
+        //    cerr << ".";
+        //}
 	}
+    //cerr << "done" << endl;
 }
 
 inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
@@ -124,8 +134,9 @@ double struct_predict(Problem* prob, Param* param){
         vector<factor*> factor_seq;
         for (int i = 0; i < ins->T; i++){
             factor_seq.push_back(nodes[i]);
-            if (i < ins->T - 1)
-                factor_seq.push_back(edges[i]);
+        }
+        for (int i = 0; i < edges.size(); i++){
+            factor_seq.push_back(edges[i]);
         }
 
 		nnz_msg = 0.0;
@@ -160,7 +171,10 @@ double struct_predict(Problem* prob, Param* param){
 
 			}*/
 
-            for (vector<factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++){
+            int factor_count = 0;
+            for (vector<factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++, factor_count++){
+                //if (factor_count % 10000 == 0)    cerr << factor_count << "/" << factor_seq.size() << endl;
+                
                 //cerr << "search" << endl;
                 (*f)->search();
                 //cerr << "subsolve" << endl;
@@ -191,7 +205,6 @@ double struct_predict(Problem* prob, Param* param){
 				score += node->score();
 				//val += node->func_val();
 				stats->uni_act_size += node->act_set.size();
-				stats->uni_ever_act_size += node->ever_act_set.size();
 				stats->num_uni++;
 				prediction_time -= get_current_time();
             }
@@ -214,7 +227,8 @@ double struct_predict(Problem* prob, Param* param){
 				score += edge->score();
 				//val += edge->func_val();
                 stats->bi_act_size += edge->act_set.size();
-				stats->num_bi++;
+				stats->ever_nnz_msg_size += (edge->ever_nnz_msg_l.size() + edge->ever_nnz_msg_r.size())/2;
+                stats->num_bi++;
 				nnz_msg += edge->nnz_msg();
 				prediction_time -= get_current_time();
             }
@@ -230,27 +244,18 @@ double struct_predict(Problem* prob, Param* param){
                     g = nodes[dinf_factor_index]->grad[dinf_index];
                 }
             }
-            //cerr << ", d_inf=" << d_inf << ", dinf_factor=" << dinf_factor_index << ", k=" << dinf_index << ", grad=" << g << endl;
-            //cerr << "==========================" << endl;
-            //cerr << ", grad[997]=" << nodes[1]->grad[997] << ", grad[429]=" << nodes[1]->grad[429] << endl;
-            //if (nodes[1]->searched_index != -1){
-                //cerr << ", searched_index=" << nodes[1]->searched_index << ", gmax=" << nodes[1]->grad[nodes[1]->searched_index] << endl;
-            //}
-            //cerr << ", msgl[429]=" << edges[1]->msgl[429] << ", msgl[997]=" << edges[1]->msgl[997];
-            //cerr << ", msgr[1163]=" << edges[1]->msgr[1163];
-            //nodes[1]->display();
 			if (p_inf < param->infea_tol && d_inf < param->grad_tol){
 				countdown++;
             }
             if (countdown >= 10){
                 break;
             }
-            /*if (iter > 10){
-                if (!edges[1]->inside[997*3039+1163]){
-                    edges[1]->act_set.push_back(make_pair(997*3039+1163, 0.0));
-                    edges[1]->inside[997*3039+1163]=true;
-                }
-            }*/
+            if ((iter+1) % max_iter == 0){
+                cerr << "iter=" << iter << ", score=" << score << ", dinf=" << d_inf << ", p_inf=" << p_inf ;
+                stats->display();
+                stats->display_time();
+                cerr << endl;
+            }
 			iter++;
 		}
 		//nnz_msg /= edges.size()*(iter+1);
@@ -268,18 +273,13 @@ double struct_predict(Problem* prob, Param* param){
             << ", dinf=" << d_inf
             << ", avg_nnz_msg=" << nnz_msg / (iter+1) / edges.size();
         
-        Float ever_act_size = 0;
-        for (int i = 0; i < nodes.size(); i++)
-            ever_act_size += nodes[i]->ever_act_set.size();
-        ever_act_size /= nodes.size();
-        cerr << ", ever_act_size=" << ever_act_size;
-
-        cerr << ", uni_search=" << stats->uni_search_time
-            << ", uni_subsolve=" << stats->uni_subsolve_time
-            << ", bi_search=" << stats->bi_search_time
-            << ", bi_subsolve=" << stats->bi_subsolve_time 
-            << ", maintain=" << stats->maintain_time 
-            << ", construct=" << stats->construct_time << endl; 
+        Float ever_nnz_msg = 0;
+        for (int i = 0; i < edges.size(); i++)
+            ever_nnz_msg += (edges[i]->ever_nnz_msg_l.size() + edges[i]->ever_nnz_msg_r.size());
+        ever_nnz_msg /= edges.size();
+        cerr << ", ever_nnz_msg=" << ever_nnz_msg;
+        stats->display_time();
+        cerr << endl; 
         Float avg_act_size = 0.0;
         Float tscore = 0.0;
         for (int i = 0; i < nodes.size(); i++){
@@ -408,17 +408,26 @@ int main(int argc, char** argv){
 	Param* param = new Param();
 	parse_cmd_line(argc, argv, param);
 	
-	Problem* prob;
-	if (param->type == "chain"){
+	Problem* prob = NULL;
+	if (param->problem_type == "chain"){
 		prob = new ChainProblem(param);
 		prob->construct_data();
         int D = ((ChainProblem*)prob)->D; 
         int K = ((ChainProblem*)prob)->K; 
 		cerr << "prob.D=" << D << endl;
 		cerr << "prob.K=" << K << endl;
-        	cerr << "prob.nnz(v)=" << nnz( ((ChainProblem*)prob)->v, K, K, 1e-12 ) << endl; 
 	}
+    if (param->problem_type == "network"){
+		prob = new CompleteGraphProblem(param);
+		prob->construct_data();
+        int K = ((CompleteGraphProblem*)prob)->K;
+        cerr << "prob.K=" << K << endl;
+    }
 	
+    if (prob == NULL){
+        cerr << "Need to specific problem type!" << endl;
+    }
+
 	cerr << "prob.N=" << prob->data.size() << endl;
 	
 	cerr << "param.rho=" << param->rho << endl;
@@ -436,5 +445,5 @@ int main(int argc, char** argv){
 	}
 	prediction_time += get_current_time();
 	cerr << "prediction time=" << prediction_time << endl;
-	return 0;	
+	return 0;
 }

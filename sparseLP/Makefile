@@ -4,7 +4,7 @@ CC=g++-4.8
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
-data_dir=/scratch/cluster/xrhuang/data/
+data_dir=.#/scratch/cluster/xrhuang/data/
 s=2
 m=10000
 q=1
@@ -18,31 +18,31 @@ rho=1
 eta=1
 infea_tol=1e-3
 
-.PHONY:pos
+.PHONY:pos 107network
 
 107network:
-	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
-	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file)
+	$(eval test_file := $(data_dir)/107network/107network)
+	./predict -p network -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
 
 pos:
 	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
 	$(eval model := model)
-	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model)
+	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model)
 
 tmp:
 	$(eval test_file := $(data_dir)/POS/pos.tmp)
 	$(eval model := model)
-	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
+	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 
 OCR.fea:
 	$(eval test_file := $(data_dir)/ChineseOCR/data.fea.$(scale))
 	$(eval model := $(@).model)
-	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model) 
+	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 	
 OCR.fea.tmp:
 	$(eval test_file := $(data_dir)/ChineseOCR/OCR.fea.test)
 	$(eval model := OCR.fea.model)
-	./predict -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(infea_tol) $(test_file) $(model) 
+	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 
 #
 #speech:

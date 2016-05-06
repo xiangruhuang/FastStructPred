@@ -16,7 +16,7 @@ class Param{
 		int solver;
 		int max_iter;
 		Float eta, rho;
-		string type; // problem type
+		string problem_type; // problem type
 		Float infea_tol; // tolerance of infeasibility
         Float grad_tol; // stopping condition for gradient
         Float nnz_tol; // threshold to shrink to zero
@@ -28,7 +28,7 @@ class Param{
 			rho = 1.0;
 			testFname = NULL;
 			modelFname = NULL;
-			type = "chain";
+			problem_type = "NULL";
 			infea_tol = 1e-3;
             grad_tol = 1e-3;
             nnz_tol = 1e-6;
@@ -41,6 +41,53 @@ class ScoreVec{
 		pair<Float, int>* sorted_c; // sorted <score, index> vector; 
 		pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
 		pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
+        int K1, K2;
+        ScoreVec(Float* _c, int _K1, int _K2){
+			//sort c as well as each row and column in increasing order
+            c = _c;
+            K1 = _K1;
+            K2 = _K2;
+			sorted_row = new pair<Float, int>*[K1];
+			for (int k1 = 0; k1 < K1; k1++){
+				sorted_row[k1] = new pair<Float, int>[K2];
+			}
+			sorted_col = new pair<Float, int>*[K2];
+			for (int k2 = 0; k2 < K2; k2++){
+				sorted_col[k2] = new pair<Float, int>[K1];
+			}
+			sorted_c = new pair<Float, int>[K1*K2];
+			for (int k1 = 0; k1 < K1; k1++){
+				int offset = k1*K2;
+				pair<Float, int>* sorted_row_k1 = sorted_row[k1];
+				for (int k2 = 0; k2 < K2; k2++){
+					Float val = c[offset+k2];
+					sorted_c[offset+k2] = make_pair(val, offset+k2);
+					sorted_row_k1[k2] = make_pair(val, k2);
+					sorted_col[k2][k1] = make_pair(val, k1);
+				}
+			}
+			for (int k1 = 0; k1 < K1; k1++){
+				sort(sorted_row[k1], sorted_row[k1]+K2, less<pair<Float, int>>());
+			}
+			for (int k2 = 0; k2 < K2; k2++){
+				sort(sorted_col[k2], sorted_col[k2]+K1, less<pair<Float, int>>());
+			}
+			sort(sorted_c, sorted_c+K1*K2, less<pair<Float, int>>());
+            
+        }
+
+        ~ScoreVec(){
+            delete[] c;
+            delete[] sorted_c;
+            for (int i = 0; i < K1; i++){
+                delete[] sorted_row[i];
+            }
+            delete[] sorted_row;
+            for (int i = 0; i < K2; i++){
+                delete[] sorted_col[i];
+            }
+            delete[] sorted_col;
+        }
 };
 
 //each Instance is an isolated subgraph
@@ -85,37 +132,37 @@ class CompleteGraphProblem : public Problem{
 	public:
 		map<string, int> label_index_map;
 		vector<string> label_name_list;
-		map<int, uni_factor*> node_index_map;
-		int D, K, N;
-		Float** w;
-		Float** v;
-		Float* c;
-		void construct_data(){
+		map<string, int> node_index_map;
+		int K;
+        ScoreVec* sv;
+		CompleteGraphProblem(Param* _param) : Problem(_param) {}
+        ~CompleteGraphProblem(){
+            label_index_map.clear();
+            label_name_list.clear();
+            node_index_map.clear();
+        }
+        void construct_data(){
+            cerr << "constructing from " << param->testFname << " ";
 			node_index_map.clear();
 			label_index_map.clear();
-			label_index_list.clear();
+			label_name_list.clear();
 			ifstream fin(param->testFname);
 			char* line = new char[LINE_LEN];
 
-			Instance* ins = new Instance();
-			Int d = -1;
-			N = 0;
+			Instance* ins = new Instance();// only one instance in this task
 			fin.getline(line, LINE_LEN);
 			string line_str(line);
 			vector<string> tokens = split(line_str, " ");
 			K = stoi(tokens[1]);
-			int num_nodes = stoi(tokens[0]);
-			for (int i = 0; i < num_nodes; i++){
+			ins->T = stoi(tokens[0]);
+			for (int i = 0; i < ins->T; i++){
 				fin.getline(line, LINE_LEN);
 				string line_str(line);
 				tokens = split(line_str, " ");
-				int node_ind = stoi(tokens[0]);
+                node_index_map.insert(make_pair(tokens[0], i));
 				Float* c = new Float[K];
 				memset(c, 0.0, sizeof(Float)*K);
-				for (vector<string>::iterator t = tokens.begin(); t != tokens.end(); t++){
-					if (t == tokens.begin()){
-						continue;
-					}
+				for (vector<string>::iterator t = tokens.begin() + 1; t != tokens.end(); t++){
 					vector<string> label_val = split(*t, ":");
 					map<string, int>::iterator it = label_index_map.find(label_val[0]);
 					int index;
@@ -125,78 +172,50 @@ class CompleteGraphProblem : public Problem{
 					} else {
 						index = it->second;
 					}
-					c[index] = stof(label_val[1]);
+					c[index] = (Float)(-stod(label_val[1]));
 				}
 				ins->node_score_vecs.push_back(c);
-				
+                ins->labels.push_back(0); // prediction is disabled for this task
+			}
+            //cerr << "#node=" << ins->T << endl;
+
+            Float* c = new Float[K*K];
+            memset(c, 0.0, sizeof(Float)*K*K);
+			for (int i = 0; i < K; i++){
+			    fin.getline(line, LINE_LEN);
+                string line_str(line);
+                vector<string> tokens = split(line_str, " ");
+                map<string, int>::iterator it = label_index_map.find(tokens[0]);
+                assert(it != label_index_map.end());
+                int k1 = it->second;
+                assert(k1 >= 0 && k1 < K);
+                for (int j = 1; j < tokens.size(); j++){
+                    vector<string> label_val = split(tokens[j], ":");
+                    Float val = (Float)stod(label_val[1]);
+                    map<string, int>::iterator it = label_index_map.find(label_val[0]);
+                    assert(it != label_index_map.end());
+                    int k2 = it->second;
+                    assert(k2 >= 0 && k2 < K);
+                    c[k1*K+k2] = -val;
+                }
 			}
 
-			for (int k1 = 0; k1 < K; k1++){
-				
-			}
-			while( !fin.eof() ){
-				fin.getline(line, LINE_LEN);
-				string line_str(line);
+            sv = new ScoreVec(c, K, K);
+            while (!fin.eof()){
+                fin.getline(line, LINE_LEN);
+                if (strlen(line) == 0)
+                    continue;
+                string line_str(line);
+                vector<string> tokens = split(line_str, " ");
+                map<string, int>::iterator i = node_index_map.find(tokens[0]), j = node_index_map.find(tokens[1]);
+                assert(i != node_index_map.end() && j != node_index_map.end());
+                ins->edges.push_back(make_pair(i->second,j->second));
+                ins->edge_score_vecs.push_back(sv);
+            }
 
-				if( line_str.length() < 2 && fin.eof() ){
-					if(ins->labels.size()>0){
-						ins->T = ins->labels.size();
-						data.push_back(ins);
-						N++;
-					}
-					break;
-				}else if( line_str.length() < 2 ){
-					ins->T = ins->labels.size();
-					data.push_back(ins);
-					N++;
-					ins = new Instance();
-					continue;
-				}
-				vector<string> tokens = split(line_str, " ");
-				//get label index
-				Int lab_ind;
-				map<string,Int>::iterator it;
-				if(  (it=label_index_map.find(tokens[0])) == label_index_map.end() ){
-					lab_ind = label_index_map.size();
-					label_index_map.insert(make_pair(tokens[0],lab_ind));
-				}else
-					lab_ind = it->second;
+            //cerr << "#edges=" << ins->edges.size() << endl;
 
-				SparseVec* x = new SparseVec();
-				for(Int i=1;i<tokens.size();i++){
-					vector<string> kv = split(tokens[i],":");
-					Int ind = atoi(kv[0].c_str());
-					Float val = atof(kv[1].c_str());
-					x->push_back(make_pair(ind,val));
-
-					if( ind > d )
-						d = ind;
-				}
-
-				//compute c = -W^T x
-				Float* c = new Float[K];
-				memset(c, 0.0, sizeof(Float)*K);
-				for (SparseVec::iterator it = x->begin(); it != x->end(); it++){
-					Float* wj = w[it->first];
-					for (int k = 0; k < K; k++)
-						c[k] -= wj[k]*it->second;
-				}
-				x->clear();
-
-
-				ins->node_score_vecs.push_back(c);
-				ins->labels.push_back(lab_ind);
-				int len = ins->labels.size();
-				if (len >= 2){
-					ins->edge_score_vecs.push_back(sv);
-					ins->edges.push_back(make_pair(len-2, len-1));
-				}
-			}
-			fin.close();
-
-			d += 1; //bias
-			if( D < d )
-				D = d;
+            data.push_back(ins);
 
 			for(Int i=0;i<data.size();i++)
 				data[i]->T = data[i]->labels.size();
@@ -218,9 +237,9 @@ class CompleteGraphProblem : public Problem{
 			K = label_index_map.size();
 
 			delete[] line;
-			
+            cerr << "done" << endl;
 		}
-}
+};
 
 class ChainProblem : public Problem{
 
@@ -267,14 +286,6 @@ class ChainProblem : public Problem{
 			for (int k = 0; k < K; k++)
 				sparse_v[k].clear();
 			delete[] sparse_v;
-			delete[] c;
-			delete[] sorted_c;
-			for (int k = 0; k < K; k++){
-				delete[] sorted_row[k];
-				delete[] sorted_col[k];
-			}
-			delete[] sorted_row;
-			delete[] sorted_col;
 		}
 
 		void readTestData(char* fname){
@@ -449,41 +460,8 @@ class ChainProblem : public Problem{
 				//extra sorting time is counted
 				prediction_time -= omp_get_wtime();
 			}
-			//sort c as well as each row and column in increasing order
-			int K1 = K;
-			int K2 = K;
-			sorted_row = new pair<Float, int>*[K1];
-			for (int k1 = 0; k1 < K1; k1++){
-				sorted_row[k1] = new pair<Float, int>[K2];
-			}
-			sorted_col = new pair<Float, int>*[K2];
-			for (int k2 = 0; k2 < K2; k2++){
-				sorted_col[k2] = new pair<Float, int>[K1];
-			}
-			sorted_c = new pair<Float, int>[K1*K2];
-			for (int k1 = 0; k1 < K1; k1++){
-				int offset = k1*K2;
-				pair<Float, int>* sorted_row_k1 = sorted_row[k1];
-				for (int k2 = 0; k2 < K2; k2++){
-					Float val = c[offset+k2];
-					sorted_c[offset+k2] = make_pair(val, offset+k2);
-					sorted_row_k1[k2] = make_pair(val, k2);
-					sorted_col[k2][k1] = make_pair(val, k1);
-				}
-			}
-			for (int k1 = 0; k1 < K1; k1++){
-				sort(sorted_row[k1], sorted_row[k1]+K2, less<pair<Float, int>>());
-			}
-			for (int k2 = 0; k2 < K2; k2++){
-				sort(sorted_col[k2], sorted_col[k2]+K1, less<pair<Float, int>>());
-			}
-			sort(sorted_c, sorted_c+K1*K2, less<pair<Float, int>>());
 			//store them in ScoreVec
-			sv = new ScoreVec();
-			sv->c = c;
-			sv->sorted_c = sorted_c;
-			sv->sorted_row = sorted_row;
-			sv->sorted_col = sorted_col;
+			sv = new ScoreVec(c, K, K);
 
 			if (param->solver == 1){
 				//extra sorting time is counted

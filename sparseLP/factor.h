@@ -12,7 +12,7 @@ class Stats{
 
 		int num_uni; 
 		Float uni_act_size;
-		Float uni_ever_act_size;
+		Float ever_nnz_msg_size;
 
 		double uni_search_time = 0.0;
 		double uni_subsolve_time = 0.0;
@@ -30,21 +30,32 @@ class Stats{
 			maintain_time = 0.0;
 			construct_time = 0.0;
 		}
-		void display(){
+		
+        void display(){
+			cerr << ", uni_act_size=" << (double)uni_act_size/num_uni;
+
 			cerr << ", area1=" << (double)area1/num_bi << ", area23=" << (double)area23/num_bi
 				<< ", area4=" << (double)area4/num_bi
-				<< ", bi_act_size=" << (double)bi_act_size/num_bi; 
-
-			cerr << ", uni_act_size=" << (double)uni_act_size/num_uni
-				<< ", uni_ever_act_size=" << (double)uni_ever_act_size/num_uni;
+				<< ", bi_act_size=" << (double)bi_act_size/num_bi 
+				<< ", bi_ever_nnz_msg=" << (double)ever_nnz_msg_size/num_bi;
 		}
-		void clear(){
+		
+        void clear(){
 			num_bi = 0; 
 			area1 = 0; area23 = 0; area4 = 0; bi_act_size = 0;
 
 			num_uni = 0;
-			uni_act_size = 0; uni_ever_act_size = 0; 
+			uni_act_size = 0; ever_nnz_msg_size = 0; 
 		}
+        
+        void display_time(){
+            cerr << ", uni_search=" << uni_search_time
+                << ", uni_subsolve=" << uni_subsolve_time
+                << ", bi_search=" << bi_search_time
+                << ", bi_subsolve=" << bi_subsolve_time 
+                << ", maintain=" << maintain_time 
+                << ", construct=" << construct_time;
+        }
 };
 
 Stats* stats = new Stats();
@@ -74,11 +85,12 @@ class uni_factor : public factor{
 		bool* inside;
 		vector<Float*> msgs;
 		vector<int> act_set;
-		vector<int> ever_act_set;
-		bool* is_ever_act;
+		//vector<int> ever_act_set;
+		//bool* is_ever_act;
 		int searched_index;
         vector<bi_factor*> edge_to_right;
         vector<bi_factor*> edge_to_left;
+        bool simplex; // if true, then \sum_k y[k] = 1, otherwise, \forall k, 0 <= y[k] <= 1
 
 		inline uni_factor(int _K, Float* _c, Param* param){
 			K = _K;
@@ -98,11 +110,11 @@ class uni_factor : public factor{
 			inside = new bool[K];
 			memset(inside, false, sizeof(bool)*K);
 			act_set.clear();
-			ever_act_set.clear();
+			//ever_act_set.clear();
             edge_to_right.clear();
             edge_to_left.clear();
-			is_ever_act = new bool[K];
-			memset(is_ever_act, false, sizeof(bool)*K);
+			//is_ever_act = new bool[K];
+			//memset(is_ever_act, false, sizeof(bool)*K);
 			msgs.clear();
 
 			//temporary
@@ -113,7 +125,7 @@ class uni_factor : public factor{
 			delete[] y;
 			delete[] grad;
 			delete[] inside;
-			delete[] is_ever_act;
+			//delete[] is_ever_act;
 			act_set.clear();
 			msgs.clear();
             edge_to_right.clear();
@@ -240,7 +252,7 @@ class uni_factor : public factor{
 				if (y[k] >= nnz_tol ){
 						//this index is justed added by search()
 						//Only if this index is active after subsolve, then it's added to ever_act_set
-                    if (!is_ever_act[k] && k == searched_index){
+                    if (k == searched_index){
                         adding_ever_act(k);
                     }
 					next_act_set.push_back(k);
@@ -344,7 +356,11 @@ class bi_factor : public factor{
 		Float* sumrow; // sumrow[k] = sum(y[k][:])
 		//Float* Y; // relaxed prediction matrix (vector)
 		vector<pair<int, Float>> act_set; // <index, val> pair
-		bool* inside;
+        vector<int> ever_nnz_msg_l; // <val, index> pair (easier to sort)
+        vector<int> ever_nnz_msg_r; // <val, index> pair (easier to sort)
+        bool* is_ever_nnz_l;
+        bool* is_ever_nnz_r;
+		static bool* inside;
 		int double_zero_area_index;
 		int searched_index;
         int check_num;
@@ -368,7 +384,7 @@ class bi_factor : public factor{
 			r->msgs.push_back(msgr);
             l->edge_to_right.push_back((bi_factor*)this);
             r->edge_to_left.push_back((bi_factor*)this);
-			updated = false, check_num = 0;
+			updated = false, check_num = (K1+K2)/2;
             sumrow = new Float[K1];
 			memset(sumrow, 0.0, sizeof(Float)*K1);
 			sumcol = new Float[K2];
@@ -385,11 +401,19 @@ class bi_factor : public factor{
 			//cache
 			//grad = new Float[K1*K2];
 			//memset(grad, 0.0, sizeof(Float)*K1*K2);
-			inside = new bool[K1*K2];
-			memset(inside, false, sizeof(bool)*K1*K2);
+            if (inside == NULL){
+                inside = new bool[K1*K2*5];
+                memset(inside, false, sizeof(bool)*K1*K2*5);
+            }
 			act_set.clear();
             sorted_ever_act_c.clear();
-
+            
+            ever_nnz_msg_l.clear();
+            is_ever_nnz_l = new bool[K1]; 
+            memset(is_ever_nnz_l, false, sizeof(bool)*K1);
+            ever_nnz_msg_r.clear();
+            is_ever_nnz_r = new bool[K2];
+            memset(is_ever_nnz_r, false, sizeof(bool)*K2);
 			//temporary
 			//fill_act_set();
 		}
@@ -403,9 +427,16 @@ class bi_factor : public factor{
 			delete[] sumcol;
 			delete[] sumrow;
 			//delete[] grad;
-			delete[] inside;
+            if (inside != NULL){
+			    delete[] inside;
+                inside = NULL;
+            }
 			act_set.clear();
             sorted_ever_act_c.clear();
+            ever_nnz_msg_l.clear();
+            ever_nnz_msg_r.clear();
+            delete[] is_ever_nnz_l;
+            delete[] is_ever_nnz_r;
 		}
 
 		void fill_act_set(){
@@ -416,8 +447,21 @@ class bi_factor : public factor{
 			}
 		}
 
+        inline void fill_inside(){
+            for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                inside[it->first] = true;
+            }
+        }
+        
+        inline void clean_inside(){
+            for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                inside[it->first] = false;
+            }
+        }
+
         Float gmax = -1e100;
 		inline void naive_search(){
+            fill_inside();
 			//compute gradient
 
 			//find max (-gradient)
@@ -439,13 +483,20 @@ class bi_factor : public factor{
 			}
             //cerr << "gmax=" << gmax << ", searched_index=" << searched_index << ", ever_l="<< l->is_ever_act[searched_index / K2] << ", ever_r=" << r->is_ever_act[searched_index % K2]
             //    << ", c=" << c[searched_index] << ", msgl=" << msgl[searched_index / K2] << ", msgr=" << msgr[searched_index % K2] << endl;
+            clean_inside();
 		}
 
         inline void adding_ever_act_l(int k1){
+            if (is_ever_nnz_l[k1]){
+                return;
+            }
+            is_ever_nnz_l[k1] = true;
+            ever_nnz_msg_l.push_back(k1);
+            
             updated = true;
             //k1 is added to l->ever_act_set
             int offset = k1*K2;
-            for (vector<int>::iterator it = r->ever_act_set.begin(); it != r->ever_act_set.end(); it++){
+            for (vector<int>::iterator it = ever_nnz_msg_r.begin(); it != ever_nnz_msg_r.end(); it++){
                 //coordinate (k1, *it) should be tracked now
                 int k1k2 = offset + (*it);
                 sorted_ever_act_c.push_back(make_pair(c[k1k2], k1k2));
@@ -453,9 +504,15 @@ class bi_factor : public factor{
         }
 
         inline void adding_ever_act_r(int k2){
+            if (is_ever_nnz_r[k2]){
+                return;
+            }
+            is_ever_nnz_r[k2] = true;
+            ever_nnz_msg_r.push_back(k2);
+
             updated = true;
             //k2 is added to r->ever_act_set
-            for (vector<int>::iterator it = l->ever_act_set.begin(); it != l->ever_act_set.end(); it++){
+            for (vector<int>::iterator it = ever_nnz_msg_l.begin(); it != ever_nnz_msg_l.end(); it++){
                 //coordinate (*it, k2) should be tracked now
                 int k1k2 = (*it)*K2 + k2;
                 sorted_ever_act_c.push_back(make_pair(c[k1k2], k1k2));
@@ -463,9 +520,13 @@ class bi_factor : public factor{
         }
 
         inline void update_sorted_ever_act_c(){
-            int size = sorted_ever_act_c.size();
-            check_num = (int)trunc(size/(sqrt(size)/4+1));
-            nth_element(sorted_ever_act_c.begin(), sorted_ever_act_c.begin() + check_num, sorted_ever_act_c.end());
+            //check_num = (int)trunc(size/(sqrt(size)/4+1));
+            //cerr << "updating..." ;
+            if (check_num < sorted_ever_act_c.size()){
+                nth_element(sorted_ever_act_c.begin(), sorted_ever_act_c.begin() + check_num, sorted_ever_act_c.end());
+                sorted_ever_act_c.erase(sorted_ever_act_c.begin() + check_num, sorted_ever_act_c.end());
+            }
+            //cerr << "done" << endl;
         }
 
         inline void fast_search(){
@@ -483,6 +544,7 @@ class bi_factor : public factor{
 
 		//bi_search()
 		inline void search(){
+            fill_inside();
             stats->bi_search_time -= get_current_time();
 			if (updated){
                 updated = false;
@@ -496,14 +558,14 @@ class bi_factor : public factor{
 			Float gmin = 0.0;
 
 			//area 4: msgl = 0, msgr = 0
-			bool* ever_act_l = l->is_ever_act;
-			bool* ever_act_r = r->is_ever_act;
+			bool* ever_nnz_l = is_ever_nnz_l;
+			bool* ever_nnz_r = is_ever_nnz_r;
             if (double_zero_area_index < K1*K2){
 			    pair<Float, int> d = sorted_c[double_zero_area_index];
                 //maintain stats of search 
                 //stats->area4++;
                 ////////
-                while (double_zero_area_index < K1*K2 && (ever_act_l[d.second / K2] || ever_act_r[d.second % K2])){
+                while (double_zero_area_index < K1*K2 && (ever_nnz_l[d.second / K2] || ever_nnz_r[d.second % K2])){
                     //maintain stats of search
                     stats->area4++;
                     ////////
@@ -516,17 +578,29 @@ class bi_factor : public factor{
                 }
             }
 
-            stats->bi_search_time += get_current_time();
-            stats->maintain_time -= get_current_time();
+            //stats->bi_search_time += get_current_time();
+            //stats->maintain_time -= get_current_time();
             //preprocessing
-			vector<int>& nnz_left = l->ever_act_set;
-			vector<int>& nnz_right = r->ever_act_set;
+			vector<pair<Float, int>> nnz_left;
+            for (vector<int>::iterator it_l = ever_nnz_msg_l.begin(); it_l != ever_nnz_msg_l.end(); it_l++){
+                int k = *it_l;
+                Float msgl_k = msgl[k];
+                if (fabs(msgl_k) > 1e-12)
+                    nnz_left.push_back(make_pair(msgl_k, k));
+            }
+			vector<pair<Float, int>> nnz_right;
+            for (vector<int>::iterator it_r = ever_nnz_msg_r.begin(); it_r != ever_nnz_msg_r.end(); it_r++){
+                int k = *it_r;
+                Float msgr_k = msgr[k];
+                if (fabs(msgr_k) > 1e-12)
+                    nnz_right.push_back(make_pair(msgr_k, k));
+            }
             int nnz_l = nnz_left.size();
             int nnz_r = nnz_right.size();
 			//maintain stats of search 
             //sorted in decreasing order
-            sort(nnz_left.begin(), nnz_left.end(), ScoreCompInc(msgl));
-            sort(nnz_right.begin(), nnz_right.end(), ScoreCompInc(msgr));
+            sort(nnz_left.begin(), nnz_left.end(), less<pair<Float, int>>());
+            sort(nnz_right.begin(), nnz_right.end(), less<pair<Float, int>>());
             int* record_l = new int[K1];
             for (int i = 0; i < K1; i++)
                 record_l[i] = -1;
@@ -534,7 +608,13 @@ class bi_factor : public factor{
 			//int num = (int)(50*nnz_l + 50*nnz_r + 2);
             //if (num > K1*K2)
             //    num = K1*K2;
-            vector<pair<Float, int>>::iterator tail = sorted_ever_act_c.begin() + check_num; // guaranteed to be smaller than .end()
+            vector<pair<Float, int>>::iterator tail;
+            if (check_num < sorted_ever_act_c.size()){
+                tail = sorted_ever_act_c.begin() + check_num; // guaranteed to be smaller than .end()
+            } else {
+                tail = sorted_ever_act_c.end();
+            }
+            stats->area1 += (tail - sorted_ever_act_c.begin());
             //cerr << "entered " << sorted_ever_act_c.size() << ", check=" << check_num<< endl;
             for (vector<pair<Float, int>>::iterator it = sorted_ever_act_c.begin(); it != tail; it++){
                 int k1k2 = it->second;
@@ -549,11 +629,11 @@ class bi_factor : public factor{
                     record_l[k1] = k2;
                 }
             }
-            Float msgr_lower = (nnz_r==0)?0.0:msgr[nnz_right[0]];
-            Float msgl_lower = (nnz_l==0)?0.0:msgl[nnz_left[0]];
+            Float msgr_lower = (nnz_r==0)?0.0:nnz_right[0].first;
+            Float msgl_lower = (nnz_l==0)?0.0:nnz_left[0].first;
             //Float c_lower = (check_num == 0)?sorted_c[0].first:sorted_ever_act_c[check_num-1].first;
-            stats->bi_search_time -= get_current_time();
-            stats->maintain_time += get_current_time();
+            //stats->bi_search_time -= get_current_time();
+            //stats->maintain_time += get_current_time();
             /*
             for (int i = 0; i < nnz_l; i++)
                 cerr << index_l[i] << ":" << msgl[index_l[i]] << " ";
@@ -568,26 +648,26 @@ class bi_factor : public factor{
                 //    << ", c=" << c[min_index]<< ", msgl=" << msgl[min_index / K2] << ", msgr=" << msgr[min_index % K2] << endl;
                 //area 1: msgl != 0, msgr != 0, search every entry
                 int limit = -1;
-                for (vector<int>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
-                    int k1 = *it_l;
+                for (vector<pair<Float, int>>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
+                    int k1 = it_l->second;
                     int offset = k1*K2;
-                    Float msgl_k1 = msgl[k1];
+                    Float msgl_k1 = it_l->first;
                     if (record_l[k1] != -1 && (limit == -1 || msgr[limit] > msgr[record_l[k1]])){
                         limit = record_l[k1];
                     }
                     if (msgl_k1 + sorted_row[k1][0].first + msgr_lower >= gmin)
                         continue;
                     //cerr << "k1=" << k1 << ", limit=" << limit << ", record[k1]=" << record_l[k1]<< endl;
-                    if (limit == nnz_right[0])
+                    if (limit == nnz_right[0].second)
                         break;
-                    for (vector<int>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
+                    for (vector<pair<Float, int>>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
                         stats->area1++;
-                        int k2 = *it_r;
+                        int k2 = it_r->second;
                         if (k2 == limit)
                             break;
                         int k1k2 = offset + k2;
                         if (inside[k1k2]) continue;
-                        Float g = c[k1k2] + rho*(msgl_k1 + msgr[k2]);
+                        Float g = c[k1k2] + rho*(msgl_k1 + it_r->first);
                         if (g < gmin){
                             gmin = g;
                             min_index = offset + k2;
@@ -612,10 +692,10 @@ class bi_factor : public factor{
 			//We visit (k1, :) in increasing order of c. Notice that:
 			//1. At any time (even include (k1,k2) that is inside act_set), (c[k1, k2] + rho*msgl_k1) is a lower bound of gmin_{k1}. 
 			//2. If we ever found that (!inside[k1, k2] && msgr[k2] <= 0), then (c[k1, k2] + rho*msgl_k1 + rho*msgr[k2]) can dominate this row. And we can just stop here. 
-			for (vector<int>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
-				int k1 = *it_l;
+			for (vector<pair<Float, int>>::iterator it_l = nnz_left.begin(); it_l != nnz_left.end(); it_l++){
+				int k1 = it_l->second;
 				int offset = k1*K2;
-				Float msgl_k1 = msgl[k1];
+				Float msgl_k1 = it_l->first;
 				pair<Float, int>* sorted_row_k1 = sorted_row[k1];
                 if (msgl_k1 + sorted_row_k1[0].first + msgr_lower >= gmin)
                     continue;
@@ -636,12 +716,13 @@ class bi_factor : public factor{
 						}
 						continue;
 					}
+                    Float msgr_k2 = msgr[k2];
 					//try to update gmin
-					if (gmin > val + rho * (msgl_k1 + msgr[k2]) ){
-						gmin = val + rho * (msgl_k1 + msgr[k2]) ;
+					if (gmin > val + rho * (msgl_k1 + msgr_k2) ){
+						gmin = val + rho * (msgl_k1 + msgr_k2) ;
 						min_index = offset + k2;
 					}
-					if (msgr[k2] <= 0){
+					if (msgr_k2 <= 0){
 						//this is a dominator, since it's already updated, we simply break here.
 						break;
 					}
@@ -658,9 +739,9 @@ class bi_factor : public factor{
 			//We visit (:, k2) in increasing order of c. Notice that:
 			//1. At any time (even include (k1,k2) that is inside act_set), (c[k1, k2] + rho*msgr_k2) is a lower bound of gmin_{k2}. 
 			//2. If we ever found that (!inside[k1, k2] && msgl[k1] <= 0), then (c[k1, k2] + rho*msgl[k1] + rho*msgr_k2) can dominate this row. And we can just stop here. 
-			for (vector<int>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
-				int k2 = *it_r;
-				Float msgr_k2 = msgr[k2];
+			for (vector<pair<Float, int>>::iterator it_r = nnz_right.begin(); it_r != nnz_right.end(); it_r++){
+				int k2 = it_r->second;
+				Float msgr_k2 = it_r->first;
 				pair<Float, int>* sorted_col_k2 = sorted_col[k2];
                 if (msgr_k2 + sorted_col_k2[0].first + msgl_lower >= gmin)
                     continue;
@@ -681,11 +762,12 @@ class bi_factor : public factor{
 						continue;
 					}
 					//try to update gmin
-					if (gmin > val + rho * (msgl[k1] + msgr_k2) ){
-						gmin = val + rho * (msgl[k1] + msgr_k2) ;
+                    Float msgl_k1 = msgl[k1];
+					if (gmin > val + rho * (msgl_k1 + msgr_k2) ){
+						gmin = val + rho * (msgl_k1 + msgr_k2) ;
 						min_index = k1k2;
 					}
-					if (msgl[k1] <= 0){
+					if (msgl_k1 <= 0){
 						//this is a dominator, since it's already updated, we simply break here.
 						break;
 					}
@@ -695,7 +777,6 @@ class bi_factor : public factor{
 					}
 				}
 			}
-
 
             delete[] record_l;
 
@@ -713,7 +794,9 @@ class bi_factor : public factor{
             //cerr << "gmin=" << gmin << ", min_index=" << min_index << ", ever_l="<< l->is_ever_act[min_index / K2] << ", ever_r=" << r->is_ever_act[min_index % K2]
             //   << ", c=" << c[min_index]<< ", msgl=" << msgl[min_index / K2] << ", msgr=" << msgr[min_index % K2] << endl;
             //assert(fabs(gmin+gmax) < 1e-6);
+            searched_index = min_index;
             stats->bi_search_time += get_current_time();
+            clean_inside();
 		}
 
 		//       min_Y  <Y, -v> + \rho/2 ( \| msgl \|_2^2 + \| msgr \|_2^2 )
@@ -725,9 +808,10 @@ class bi_factor : public factor{
 		//	Let C := -B/A
 		//	bi_subsolve()
 		inline void subsolve(){
+            fill_inside();
             stats->bi_subsolve_time -= get_current_time();
 
-			Float A = rho * (2 + l->ever_act_set.size() + r->ever_act_set.size());
+			Float A = rho * (2 + ever_nnz_msg_l.size() + ever_nnz_msg_r.size());
 			Float* Y_new = new Float[act_set.size()];
 
 			int act_count = 0;
@@ -785,15 +869,9 @@ class bi_factor : public factor{
 				//possible shrink here
 				if (it->second > nnz_tol){
                     int k1 = k1k2 / K2, k2 = k1k2 % K2;
-                    if (!l->is_ever_act[k1]){
-                        l->adding_ever_act(k1);
-                        //l->is_ever_act[k1] = true;
-                        //l->ever_act_set.push_back(k1);
-                    }
-                    if (!r->is_ever_act[k2]){
-                        r->adding_ever_act(k2);
-                        //r->is_ever_act[k2] = true;
-                        //r->ever_act_set.push_back(k2);
+                    if (k1k2 == searched_index){
+                        adding_ever_act_l(k1);
+                        adding_ever_act_r(k2);
                     }
 					next_act_set.push_back(make_pair(k1k2, it->second));
 				} else {
@@ -805,6 +883,7 @@ class bi_factor : public factor{
 
 			delete[] Y_new;
             stats->bi_subsolve_time += get_current_time();
+            clean_inside();
 		}
 
 		//     \mu^{t+1} - \mu^t
@@ -815,12 +894,15 @@ class bi_factor : public factor{
 			//update msgl, msgr
 			Float* y_l = l->y;
 			Float* y_r = r->y;
-			for (int k = 0; k < K1; k++){
-				msgl[k] = msgl[k] + eta * (sumrow[k] - y_l[k]);
+			for (vector<int>::iterator it_l = ever_nnz_msg_l.begin(); it_l != ever_nnz_msg_l.end(); it_l++){
+                int k = *it_l;
+                msgl[k] += eta * (sumrow[k] - y_l[k]);
+            }
+			for (vector<int>::iterator it_r = ever_nnz_msg_r.begin(); it_r != ever_nnz_msg_r.end(); it_r++){
+                int k = *it_r;
+                msgr[k] += eta * (sumcol[k] - y_r[k]);
 			}
-			for (int k = 0; k < K2; k++){
-				msgr[k] = msgr[k] + eta * (sumcol[k] - y_r[k]);
-			}
+
             stats->maintain_time += get_current_time();
 		}
 
@@ -910,12 +992,12 @@ class bi_factor : public factor{
 };
 
 inline void uni_factor::adding_ever_act(int k){
-    if (is_ever_act[k]){
+    /*if (is_ever_act[k]){
         cerr << "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << endl;
         return;
-    }
-    is_ever_act[k] = true;
-    ever_act_set.push_back(k);
+    }*/
+    //is_ever_act[k] = true;
+    //ever_act_set.push_back(k);
     for (vector<bi_factor*>::iterator to_r = edge_to_right.begin(); to_r != edge_to_right.end(); to_r++){
         bi_factor* edge = *to_r;
         edge->adding_ever_act_l(k);
@@ -925,3 +1007,5 @@ inline void uni_factor::adding_ever_act(int k){
         edge->adding_ever_act_r(k);
     }
 }
+
+bool* bi_factor::inside = new bool[4000000];
