@@ -20,6 +20,7 @@ class Param{
 		Float infea_tol; // tolerance of infeasibility
         Float grad_tol; // stopping condition for gradient
         Float nnz_tol; // threshold to shrink to zero
+        bool MultiLabel;
 
 		Param(){
 			solver = 0;
@@ -32,6 +33,7 @@ class Param{
 			infea_tol = 1e-3;
             grad_tol = 1e-3;
             nnz_tol = 1e-6;
+            MultiLabel = false;
 		}
 };
 
@@ -114,11 +116,10 @@ class Instance{
 };
 
 class Problem{
-	private:
+	public:
 		Problem(){
 		};
 
-	public:
 		Param* param;
 		vector<Instance*> data;
 		Problem(Param* _param) : param(_param) {}

@@ -44,6 +44,9 @@ OCR.fea.tmp:
 	$(eval model := OCR.fea.model)
 	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 
+test:
+	./predict -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  XXX YYY
+
 #
 #speech:
 #	$(eval train_file := /scratch/cluster/ianyen/data/speech/speech.$(scale))

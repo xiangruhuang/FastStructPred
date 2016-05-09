@@ -1,3 +1,5 @@
+#ifndef FACTOR_H
+#define FACTOR_H
 //prediction
 
 #include "util.h"
@@ -60,7 +62,7 @@ class Stats{
 
 Stats* stats = new Stats();
 
-class factor{
+class Factor{
     public:
         virtual inline void search(){
         }
@@ -68,10 +70,10 @@ class factor{
         }
 };
 
-class bi_factor;
+class BiFactor;
 
 //unigram factor, y follows simplex constraints
-class uni_factor : public factor{
+class UniFactor : public Factor{
 	public:
 		//fixed
 		int K;
@@ -88,11 +90,10 @@ class uni_factor : public factor{
 		//vector<int> ever_act_set;
 		//bool* is_ever_act;
 		int searched_index;
-        vector<bi_factor*> edge_to_right;
-        vector<bi_factor*> edge_to_left;
-        bool simplex; // if true, then \sum_k y[k] = 1, otherwise, \forall k, 0 <= y[k] <= 1
+        vector<BiFactor*> edge_to_right;
+        vector<BiFactor*> edge_to_left;
 
-		inline uni_factor(int _K, Float* _c, Param* param){
+		inline UniFactor(int _K, Float* _c, Param* param){
 			K = _K;
 			rho = param->rho;
             nnz_tol = param->nnz_tol;
@@ -121,7 +122,7 @@ class uni_factor : public factor{
 			//fill_act_set();
 		}
 
-		~uni_factor(){
+		~UniFactor(){
 			delete[] y;
 			delete[] grad;
 			delete[] inside;
@@ -161,7 +162,7 @@ class uni_factor : public factor{
 			int max_index = -1;
 			for (int k = 0; k < K; k++){
 				if (inside[k]) continue;
-				//if not inside, y_k is guaranteed to be zero, and y_k >= 0 by constraint
+				//if not inside, y_k is guaranteed to be zero, and y_k is nonnegative, so we only care gradient < 0
 				if (grad[k] > 0) continue;
 				if (-grad[k] > gmax){
 					gmax = -grad[k];
@@ -337,21 +338,21 @@ class uni_factor : public factor{
 };
 
 //bigram factor
-class bi_factor : public factor{
+class BiFactor : public Factor{
 	public:
 		//fixed
 		int K1, K2; //number of possible labels of node l,r, resp.
 		Float rho, eta;
-		uni_factor* l;
-		uni_factor* r;
+		UniFactor* l;
+		UniFactor* r;
 		Float* c; // score vector: c[k1k2] = -v[k1k2/K][k1k2%K];
 		pair<Float, int>* sorted_c; // sorted <score, index> vector; 
 		pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
 		pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
         Float nnz_tol;
 		//maintained
-		Float* msgl; // message to uni_factor l
-		Float* msgr; // messageto uni_factor r
+		Float* msgl; // message to UniFactor l
+		Float* msgr; // messageto UniFactor r
 		Float* sumcol; // sumcol[k] = sum(y[:][k])
 		Float* sumrow; // sumrow[k] = sum(y[k][:])
 		//Float* Y; // relaxed prediction matrix (vector)
@@ -367,7 +368,7 @@ class bi_factor : public factor{
         vector<pair<Float, int>> sorted_ever_act_c;
         bool updated;
 
-		inline bi_factor(uni_factor* _l, uni_factor* _r, ScoreVec* sv, Param* param){
+		inline BiFactor(UniFactor* _l, UniFactor* _r, ScoreVec* sv, Param* param){
 			l = _l;
 			r = _r;
 			K1 = l->K;
@@ -382,8 +383,8 @@ class bi_factor : public factor{
 			memset(msgr, 0.0, sizeof(Float)*K2);
 			l->msgs.push_back(msgl);
 			r->msgs.push_back(msgr);
-            l->edge_to_right.push_back((bi_factor*)this);
-            r->edge_to_left.push_back((bi_factor*)this);
+            l->edge_to_right.push_back((BiFactor*)this);
+            r->edge_to_left.push_back((BiFactor*)this);
 			updated = false, check_num = (K1+K2)/2;
             sumrow = new Float[K1];
 			memset(sumrow, 0.0, sizeof(Float)*K1);
@@ -418,7 +419,7 @@ class bi_factor : public factor{
 			//fill_act_set();
 		}
 
-		~bi_factor(){
+		~BiFactor(){
 
 			//delete[] Y;
 			delete[] c;
@@ -991,21 +992,23 @@ class bi_factor : public factor{
         }
 };
 
-inline void uni_factor::adding_ever_act(int k){
+inline void UniFactor::adding_ever_act(int k){
     /*if (is_ever_act[k]){
         cerr << "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO" << endl;
         return;
     }*/
     //is_ever_act[k] = true;
     //ever_act_set.push_back(k);
-    for (vector<bi_factor*>::iterator to_r = edge_to_right.begin(); to_r != edge_to_right.end(); to_r++){
-        bi_factor* edge = *to_r;
+    for (vector<BiFactor*>::iterator to_r = edge_to_right.begin(); to_r != edge_to_right.end(); to_r++){
+        BiFactor* edge = *to_r;
         edge->adding_ever_act_l(k);
     }
-    for (vector<bi_factor*>::iterator to_l = edge_to_left.begin(); to_l != edge_to_left.end(); to_l++){
-        bi_factor* edge = *to_l;
+    for (vector<BiFactor*>::iterator to_l = edge_to_left.begin(); to_l != edge_to_left.end(); to_l++){
+        BiFactor* edge = *to_l;
         edge->adding_ever_act_r(k);
     }
 }
 
-bool* bi_factor::inside = new bool[4000000];
+bool* BiFactor::inside = new bool[4000000];
+
+#endif

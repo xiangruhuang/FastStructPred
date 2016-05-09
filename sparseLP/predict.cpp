@@ -2,6 +2,7 @@
 #include "factor.h"
 #include <time.h>
 #include "LPsparse.h"
+#include "multifactor.h"
 
 double prediction_time = 0.0;
 extern Stats* stats;
@@ -60,28 +61,28 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 	}
 }
 
-inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& nodes, vector<bi_factor*>& edges){
+inline void construct_factor(Instance* ins, Param* param, vector<UniFactor*>& nodes, vector<BiFactor*>& edges){
 	nodes.clear();
 	edges.clear();
 
     //cerr << "constructing uniFactor";
-	//construct uni_factors
+	//construct UniFactors
 	int node_count = 0;
 	for (int t = 0; t < ins->T; t++){
-		uni_factor* node = new uni_factor(ins->node_label_lists[t]->size(), ins->node_score_vecs[t], param);
+		UniFactor* node = new UniFactor(ins->node_label_lists[t]->size(), ins->node_score_vecs[t], param);
 		nodes.push_back(node);
     //    cerr << ".";
 	}
     //cerr << endl;
 
     //cerr << "constructing biFactor";
-	//construct bi_factors
+	//construct BiFactors
 	for (int e = 0; e < ins->edges.size(); e++){
 		int e_l = ins->edges[e].first, e_r = ins->edges[e].second;
 		ScoreVec* sv = ins->edge_score_vecs[e];
-		uni_factor* l = nodes[e_l];
-		uni_factor* r = nodes[e_r];
-		bi_factor* edge = new bi_factor(l, r, sv, param);
+		UniFactor* l = nodes[e_l];
+		UniFactor* r = nodes[e_r];
+		BiFactor* edge = new BiFactor(l, r, sv, param);
 		edges.push_back(edge);
         //if (e % 100 == 0){
         //    cerr << ".";
@@ -90,15 +91,15 @@ inline void construct_factor(Instance* ins, Param* param, vector<uni_factor*>& n
     //cerr << "done" << endl;
 }
 
-inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
+inline Float compute_acc(Instance* ins, vector<UniFactor*> nodes){
 
 	Float hit = 0;
 	//for this instance
 
 	//compute hits
 	int node_count = 0;
-	for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){	
-		uni_factor* node = *it_node;
+	for (vector<UniFactor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){	
+		UniFactor* node = *it_node;
 		//Rounding
 		hit+=node->y[ins->labels[node_count]];
 	}
@@ -107,8 +108,30 @@ inline Float compute_acc(Instance* ins, vector<uni_factor*> nodes){
 
 
 double struct_predict(Problem* prob, Param* param){
-	vector<uni_factor*> nodes; 
-	vector<bi_factor*> edges;
+    if (param->problem_type == "multilabel"){
+        //multilabel
+        cerr << "yes" << endl;
+        int K = 100;
+        Instance* ins = prob->data[0];
+        MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
+        MultiBiFactor* edge = new MultiBiFactor(K, node, ins->edge_score_vecs[0], param);
+        cerr << param->max_iter << endl;
+        for (int iter = 0; iter < param->max_iter; iter++){
+            //if (iter == 0) 
+                node->search();
+            node->subsolve();
+            //if (iter == 0) 
+                edge->search();
+            edge->subsolve();
+            node->update_multipliers();
+            edge->update_multipliers();
+            node->display();
+            edge->display();
+        }
+        return 0.0;
+    }
+	vector<UniFactor*> nodes; 
+	vector<BiFactor*> edges;
 	Float hit = 0.0;
 	Float N = 0.0;
 	int n = 0;
@@ -131,7 +154,7 @@ double struct_predict(Problem* prob, Param* param){
 		stats->clear();
         int countdown = 0;
 
-        vector<factor*> factor_seq;
+        vector<Factor*> factor_seq;
         for (int i = 0; i < ins->T; i++){
             factor_seq.push_back(nodes[i]);
         }
@@ -145,7 +168,7 @@ double struct_predict(Problem* prob, Param* param){
 			//val = 0.0;
             /*random_shuffle(node_indices, node_indices+nodes.size());
 			for (int n = 0; n < nodes.size(); n++){
-				uni_factor* node = nodes[node_indices[n]];
+				UniFactor* node = nodes[node_indices[n]];
 
 				stats->uni_search_time -= get_current_time();
 				node->search();
@@ -159,7 +182,7 @@ double struct_predict(Problem* prob, Param* param){
 
             random_shuffle(edge_indices, edge_indices+edges.size());
 			for (int e = 0; e < edges.size(); e++){
-				bi_factor* edge = edges[edge_indices[e]];
+				BiFactor* edge = edges[edge_indices[e]];
                 
 				stats->bi_search_time -= get_current_time();
 				edge->search();
@@ -172,7 +195,7 @@ double struct_predict(Problem* prob, Param* param){
 			}*/
 
             int factor_count = 0;
-            for (vector<factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++, factor_count++){
+            for (vector<Factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++, factor_count++){
                 //if (factor_count % 10000 == 0)    cerr << factor_count << "/" << factor_seq.size() << endl;
                 
                 //cerr << "search" << endl;
@@ -182,8 +205,8 @@ double struct_predict(Problem* prob, Param* param){
                 //cerr << "end" << endl;
             }
 
-			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
-				bi_factor* edge = *it_edge;
+			for (vector<BiFactor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
+				BiFactor* edge = *it_edge;
 				edge->update_multipliers();
 			}
 
@@ -192,8 +215,8 @@ double struct_predict(Problem* prob, Param* param){
             //cerr << "==========================" << endl;
             d_inf = 0.0; int dinf_index = -1; int dinf_factor_index = -1;
             int node_count = 0;
-			for (vector<uni_factor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){
-				uni_factor* node = *it_node;
+			for (vector<UniFactor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){
+				UniFactor* node = *it_node;
                 Float gmax_node = node->dual_inf();
                 if (gmax_node > d_inf){
                     d_inf = gmax_node;
@@ -211,8 +234,8 @@ double struct_predict(Problem* prob, Param* param){
            
             int edge_count = 0;
             p_inf = 0.0;
-			for (vector<bi_factor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++, edge_count++){
-				bi_factor* edge = *it_edge;
+			for (vector<BiFactor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++, edge_count++){
+				BiFactor* edge = *it_edge;
                 Float gmax_edge = edge->dual_inf();
                 if (gmax_edge > d_inf){
                     d_inf = gmax_edge;
@@ -236,7 +259,7 @@ double struct_predict(Problem* prob, Param* param){
             if (dinf_factor_index != -1){
                 if (dinf_factor_index >= nodes.size()){
                     edge_count = dinf_factor_index - nodes.size();
-                    bi_factor* edge = edges[edge_count];
+                    BiFactor* edge = edges[edge_count];
                     int k1k2 = dinf_index;
                     int k1 = k1k2 / edge->K2, k2 = k1k2 % edge->K2;
                     g = -(edge->c[dinf_index] + edge->msgl[k1] + edge->msgr[k2]);
@@ -422,6 +445,36 @@ int main(int argc, char** argv){
 		prob->construct_data();
         int K = ((CompleteGraphProblem*)prob)->K;
         cerr << "prob.K=" << K << endl;
+    }
+    if (param->problem_type == "multilabel"){
+        prob = new Problem();
+        Instance* ins = new Instance();
+        int K = 100;
+        vector<string>* label_list = new vector<string>();
+        for (int k = 0; k < K; k++){
+            label_list->push_back(to_string(k));
+        }
+        Float inf = 1e100;
+        Float* c = new Float[K];
+        for (int k = 0; k < K; k++)
+            c[k] = inf;
+        Float* c_f = new Float[K*K];
+        for (int kk = 0; kk < K*K; kk++)
+            c_f[kk] = inf;
+        for (int k = 0; k < K; k++)
+            c_f[k*K+k] = 0.0;
+        c_f[1*K+2] = -2.0;
+        c_f[2*K+1] = -1.0;
+        c[1] = -1;
+        c[2] = -2;
+
+        ins->node_score_vecs.push_back(c);
+        ins->labels.push_back(2);
+        ins->node_label_lists.push_back(label_list);
+        ins->T = 1;
+        ScoreVec* sv = new ScoreVec(c_f, K, K);
+        ins->edge_score_vecs.push_back(sv);
+        prob->data.push_back(ins);
     }
 	
     if (prob == NULL){
