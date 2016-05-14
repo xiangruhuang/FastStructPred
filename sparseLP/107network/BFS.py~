@@ -1,0 +1,39 @@
+def bfs_dist(num_nodes, adj_list, start_node):
+    
+    dist_map = dict();
+    dist_map[start_node] = 0;
+    visited_nodes = set();
+    visited_nodes.add(start_node);
+    nodes_to_expand = set();
+    nodes_to_expand.add(start_node); #any node in node_to_expand is visited and has value in dist_map
+    while( len(visited_nodes) < num_nodes ):
+        nodes_next_level = set();
+        print(len(visited_nodes));
+        #expand this level
+        for node in nodes_to_expand:
+            for n2 in adj_list[node]:
+                if n2 not in visited_nodes :
+                    visited_nodes.add(n2);
+                    dist_map[n2] = dist_map[node] + 1;
+                    nodes_next_level.add(n2);
+        
+        nodes_to_expand = nodes_next_level;
+
+    return dist_map;
+
+
+def main():
+
+    adj_list = list();
+    adj_list.append([1,2]);
+    adj_list.append([0,3]);
+    adj_list.append([0,3]);
+    adj_list.append([1,2]);
+
+    num_nodes = 4;
+    dist_map = bfs_dist(num_nodes, adj_list, 0);
+    
+    print(dist_map);
+
+if __name__ == '__main__':
+    main()

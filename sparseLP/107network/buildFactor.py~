@@ -1,0 +1,99 @@
+import sys;
+import os;
+import BFS;
+
+def readAdjList(fpath):
+    adj_list = dict();
+    #build a list for each node
+    with open(fpath) as f:
+        for line in f:
+            pair = line.strip().split(sep=' ');
+            n1 = int(pair[0]);
+            n2 = int(pair[1]);
+            if n1 not in adj_list:
+                adj_list[n1] = list();
+            if n2 not in adj_list:
+                adj_list[n2] = list();
+    
+    #add neighbors of each node into the adj_list
+    with open(fpath) as f:
+        for line in f:
+            pair = line.strip().split(sep=' ');
+            n1 = int(pair[0]);
+            n2 = int(pair[1]);
+            adj_list[n1].append(n2);
+            adj_list[n2].append(n1);
+    
+    return adj_list;
+
+
+def readNodeFea(fpath):
+    node_fea_map = dict();
+    with open(fpath) as f:
+        for line in f:
+            tokens = line.strip().split(sep=' ');
+            node = int(tokens[0]);
+            node_fea_map[node] = list( [int(val) for val in tokens[1:]] );
+    
+    return node_fea_map;
+
+
+def dot(fea1, fea2):
+    return sum(  [x*y for (x,y) in zip(fea1,fea2)]  );
+
+
+
+
+try:
+    graphFpath = sys.argv[1];
+    subgraphFpath = sys.argv[2];
+    nodeFeaFpath = sys.argv[3];
+    bifactor_weight = float(sys.argv[4]);
+except IndexError:
+    print('python3 buildFactor.py [graphFile] [subGraphFile] [nodeFeaFile] [bifactor_weight]');
+    print('OUTPUT: unifactor, bifactor');
+    exit();
+
+#read graphs
+adj_list_graph = readAdjList(graphFpath);
+adj_list_subgraph = readAdjList(subgraphFpath);
+node_fea_map = readNodeFea(nodeFeaFpath);
+
+#compute statistics
+
+num_node = len(adj_list_graph);
+num_sub_node = len(adj_list_subgraph);
+num_edge = sum([len(l) for l in adj_list_graph.values()]);
+num_sub_edge = sum([len(l) for l in adj_list_subgraph.values()]);
+
+print('graph: #node='+str(num_node)+', #edge='+str(num_edge));
+print('subgraph: #node='+str(num_sub_node)+', #edge='+str(num_sub_edge));
+
+#compute unigram factor value
+print('\nbuild unigram factors...');
+
+with open('uniFactor','w') as f:
+    f.write(str(num_sub_node)+' '+str(num_node)+'\n');
+    for node in adj_list_subgraph.keys():
+        f.write(str(node)+' ');
+        for node2 in adj_list_graph.keys():
+            f.write( str(node2)+":"+str(dot(node_fea_map[node], node_fea_map[node2]))+' ' );
+        f.write('\n');
+        print('.',end=''); sys.stdout.flush();
+
+#compute bigram factor values
+print('\nbuild bigram factors...');
+
+with open('biFactor','w') as f:
+    f.write(str(num_node)+' '+str(num_node)+'\n');
+    for node in adj_list_graph.keys():
+        dist_map = BFS.bfs_dist(num_node, adj_list_graph, node);
+        f.write(str(node)+' ');
+        for (n,d) in dist_map.items():
+            if n != node:
+                f.write(str(n)+':'+str(bifactor_weight/d)+' ');
+            else:
+                f.write(str(n)+':-1e300 ');
+        f.write('\n');
+        print('.',end=''); sys.stdout.flush();
+
