@@ -149,6 +149,7 @@ double struct_predict(Problem* prob, Param* param){
             edge->c[8] = 0; edge->c[9] = 0;     edge->c[10] = 0.0;       edge->c[11] = 0.0;
             edge->c[12] = 0; edge->c[13] = 0;     edge->c[14] = 0.0;       edge->c[15] = 0.0;
             */
+
             /*for (int k1 = 0; k1 < K; k1++){
                 for (int k2 = 0; k2 < K; k2++){
                     edge->c[k1*K+k2] = edge->c[k1*14+k2];
@@ -180,7 +181,7 @@ double struct_predict(Problem* prob, Param* param){
                 /*while (node->dual_inf() > node->nnz_tol){
                     node->subsolve();
                     node->check_integrity();
-                    //node->display();
+                    node->display();
                     //edge->display();
                 }*/
             

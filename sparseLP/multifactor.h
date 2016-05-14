@@ -7,7 +7,7 @@
 extern Stats* stats;
 
 extern bool debug;
-bool shrink = false;
+bool shrink = true;
 
 class MultiBiFactor;
 
@@ -59,7 +59,7 @@ class MultiUniFactor : public Factor{
             y_bar = new Float[K];
             memset(y_bar, 0, sizeof(Float)*K);
 
-            fill_act_set();
+            //fill_act_set();
         }
 
         ~MultiUniFactor(){
@@ -196,16 +196,18 @@ class MultiBiFactor : public Factor{
             memset(is_ever_nnz, 0, sizeof(bool)*K*K);
             
             //just for test
-            fill_act_set();
+            //fill_act_set();
         }
 
         ~MultiBiFactor(){
             for (int k = 0; k < K*K; k++){
-                delete[] Y[k];
+                if (Y[k] != NULL)
+                    delete[] Y[k];
             }
             delete[] Y;
             for (int k = 0; k < K*K; k++){
-                delete[] Y_bar[k];
+                if (Y_bar[k] != NULL)
+                    delete[] Y_bar[k];
             }
             delete[] Y_bar;
             delete[] sum_Y_bar;
@@ -223,11 +225,14 @@ class MultiBiFactor : public Factor{
         }
 
         inline void fill_act_set(){
-            for (int kk = 0; kk < K*K; kk++){
-                act_set.push_back(make_pair(Y[kk], kk));
-                inside[kk] = true;
-                ever_nnz_Y_bar.push_back(make_pair(Y_bar[kk], kk));
-                is_ever_nnz[kk] = true;
+            for (int k1 = 0; k1 < K; k1++){
+                for (int k2 = k1+1; k2 < K; k2++){
+                    int kk = k1*K+k2;
+                    act_set.push_back(make_pair(Y[kk], kk));
+                    inside[kk] = true;
+                    ever_nnz_Y_bar.push_back(make_pair(Y_bar[kk], kk));
+                    is_ever_nnz[kk] = true;
+                }
             }
         }
 
@@ -236,8 +241,9 @@ class MultiBiFactor : public Factor{
             Float gmin = 0.0;
             int min_index = -1;
             for (int k1 = 0; k1 < K; k1++){
-                for (int k2 = 0; k2 < K; k2++){
+                for (int k2 = k1 + 1; k2 < K; k2++){
                     int k1k2 = k1*K+k2;
+                    assert(k1 < k2);
                     if (inside[k1k2]) continue;
                     Float* Ybar = Y_bar[k1k2];
                     Float msgl = Ybar[3] + Ybar[2] - y_bar[k1];
@@ -259,7 +265,7 @@ class MultiBiFactor : public Factor{
                 //cerr << "bi_searched_index=" << searched_index << ", grad=" << gmin << ", c*=" << c[searched_index] << endl;
             }
             if (min_index != -1){
-                inside[min_index] = true;
+                inside[min_index] = true; 
                 act_set.push_back(make_pair(Y[min_index], min_index));
             }
         }
@@ -323,7 +329,7 @@ class MultiBiFactor : public Factor{
                     //shrink
                     if (true || fabs(Y_new[3]) > nnz_tol ){
                         next_act_set.push_back(make_pair(Y_old, k1k2));
-                        if (searched_index == k1k2 && !is_ever_nnz[k1k2]){
+                        if (!is_ever_nnz[k1k2]){
                             is_ever_nnz[k1k2] = true;
                             ever_nnz_Y_bar.push_back(make_pair(Ybar, searched_index));
                         }
@@ -365,26 +371,26 @@ class MultiBiFactor : public Factor{
                     Float delta_y = Y_new[1] - Y_old[1];
                     sum_Y_bar[k2] += delta_y;
                     Ybar[1] += delta_y;
+                    Y_old[1] = Y_new[1];
                     //10
                     delta_y = Y_new[2] - Y_old[2];
                     sum_Y_bar[k1] += delta_y;
                     Ybar[2] += delta_y;
+                    Y_old[2] = Y_new[2];
                     //11
                     delta_y = Y_new[3] - Y_old[3];
                     sum_Y_bar[k2] += delta_y;
                     sum_Y_bar[k1] += delta_y;
                     Ybar[3] += delta_y;
+                    Y_old[3] = Y_new[3];
 
                     //Y[k1k2] = new_cube;
 
-                    Y_old[3] = Y_new[3];
-                    Y_old[2] = Y_new[2];
-                    Y_old[1] = Y_new[1];
                     Y_old[0] = Y_new[0];
                     //shrink
                     if (true || fabs(Y_new[3]) > nnz_tol ){
-                        next_act_set.push_back(make_pair(Y_old, k1k2));
-                        if (searched_index == k1k2 && !is_ever_nnz[k1k2]){
+                        //next_act_set.push_back(make_pair(Y_old, k1k2));
+                        if (!is_ever_nnz[k1k2]){
                             is_ever_nnz[k1k2] = true;
                             ever_nnz_Y_bar.push_back(make_pair(Ybar, searched_index));
                         }
@@ -397,7 +403,7 @@ class MultiBiFactor : public Factor{
 
             stats->bi_subsolve_time += get_current_time();            
 
-            act_set = next_act_set;
+            //act_set = next_act_set;
 
             //update ever_nnz_Y_bar
             /*for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
@@ -477,7 +483,7 @@ class MultiBiFactor : public Factor{
 			Float p_inf = 0.0;
 			Float* y = node->y;
 			for (int k1 = 0; k1 < K; k1++){
-                for (int k2 = 0; k2 < K; k2++){
+                for (int k2 = k1+1; k2 < K; k2++){
                     Float* Ykk = Y[k1*K+k2];
 				    Float inf = fabs(Ykk[2] + Ykk[3] - y[k1]);
                     if (inf > p_inf)
@@ -581,6 +587,7 @@ inline void MultiUniFactor::search(){
         Float* Ybar = it->first;
         int k1k2 = it->second;
         int k1 = k1k2 / K, k2 = k1k2 % K;
+        assert(k1 < k2);
         grad[k1] -= rho * (Ybar[2] + Ybar[3] - y_bar[k1]);
         grad[k2] -= rho * (Ybar[1] + Ybar[3] - y_bar[k2]);
     }
@@ -632,7 +639,7 @@ inline void MultiUniFactor::subsolve(){
         for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
             int k = it->second;
             Float t = sum_Y_bar[k] - c[k]/rho;
-            t /= (2*K);
+            t /= (K-1);
             t -= (y_bar[k] - it->first);
             if (debug){
                 //cerr << "k=" << k << ", t=" << t << endl;
@@ -665,10 +672,29 @@ inline void MultiUniFactor::subsolve(){
             //Only if this index is active after subsolve, then it's added to ever_nnz_y_bar
             y_bar[k] += delta_y;
             if (k == searched_index && !is_ever_nnz[k]){
-                //cerr << "y[k]=" << it->first << endl;
+                //update act_set and ever_nnz_Y_bar of edge
+                bool* ever_nnz_Y = edge->is_ever_nnz;
+                vector<pair<Float*, int>>& act_set_Y = edge->act_set;
+                bool* inside_Y = edge->inside;
+                Float** Y = edge->Y;
+                Float** Y_bar = edge->Y_bar;
+                vector<pair<Float*, int>>& ever_nnz_Y_bar = edge->ever_nnz_Y_bar;
+
+                for (vector<pair<Float, int>>::iterator itt = ever_nnz_y_bar.begin(); itt != ever_nnz_y_bar.end(); itt++){
+                    int k1 = min(k, itt->second);
+                    int k2 = max(k, itt->second);
+                    assert(k1 < k2);
+                    int k1k2 = k1*K+k2;
+                    if (!inside_Y[k1k2]){
+                        act_set_Y.push_back(make_pair(Y[k1k2],k1k2));
+                        inside_Y[k1k2] = true;
+                        ever_nnz_Y[k1k2] = true;
+                        ever_nnz_Y_bar.push_back(make_pair(Y_bar[k1k2], k1k2));
+                    }
+                }
+                
                 ever_nnz_y_bar.push_back(make_pair(it->first, k));
                 is_ever_nnz[k] = true;
-                //adding_ever_nnz_msg(k);
             }
             next_act_set.push_back(make_pair(it->first, k));
         } else {
@@ -696,7 +722,7 @@ inline Float MultiUniFactor::dual_inf(){
     for (vector<pair<Float, int>>::iterator uni_msg = ever_nnz_y_bar.begin(); uni_msg != ever_nnz_y_bar.end(); uni_msg++){
         Float ybar = uni_msg->first;
         int k = uni_msg->second;
-        grad[k] += rho * ybar * 2 * K;
+        grad[k] += rho * ybar * (K-1);
     }
     //max gradient inside active set
     Float gmax = 0.0;
