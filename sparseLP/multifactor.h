@@ -25,6 +25,7 @@ class MultiUniFactor : public Factor{
         bool* inside;
         bool* is_ever_nnz;
         int searched_index;
+        int* deg;
         Float* grad;
         Float* cache;
         //only uses edge->sum_Y_bar
@@ -50,6 +51,9 @@ class MultiUniFactor : public Factor{
             cache = new Float[K];
             memset(cache, 0, sizeof(Float)*K);
 
+            deg = new int[K];
+            memset(deg, 0, sizeof(int)*K);
+
             inside = new bool[K];
             memset(inside, 0, sizeof(bool)*K);
             is_ever_nnz = new bool[K];
@@ -69,6 +73,7 @@ class MultiUniFactor : public Factor{
             delete[] y_bar;
             delete[] grad;
             delete[] cache;
+            delete[] deg;
         }
 
         inline void fill_act_set(){
@@ -154,6 +159,7 @@ class MultiBiFactor : public Factor{
         int K;
         Float rho, eta;
         Float* c;
+        pair<Float, int>* sorted_c;
         Float nnz_tol;
 
         Float** Y;
@@ -165,6 +171,7 @@ class MultiBiFactor : public Factor{
         bool* is_ever_nnz;
         int searched_index;
         MultiUniFactor* node; // assume only one node connects to it
+        int search_pointer;
 
         //can be accessed and should be maintained
         vector<pair<Float*, int>> ever_nnz_Y_bar; // <y_bar, index>
@@ -174,6 +181,7 @@ class MultiBiFactor : public Factor{
         MultiBiFactor(int _K, MultiUniFactor* _node, ScoreVec* sv, Param* param){
             K = _K;
             c = sv->c;
+            sorted_c = sv->sorted_c;
             rho = param->rho;
             eta = param->eta;
             nnz_tol = param->nnz_tol;
@@ -194,7 +202,8 @@ class MultiBiFactor : public Factor{
             memset(inside, 0, sizeof(bool)*K*K);
             is_ever_nnz = new bool[K*K];
             memset(is_ever_nnz, 0, sizeof(bool)*K*K);
-            
+            search_pointer = 0;
+
             //just for test
             //fill_act_set();
         }
@@ -232,6 +241,8 @@ class MultiBiFactor : public Factor{
                     inside[kk] = true;
                     ever_nnz_Y_bar.push_back(make_pair(Y_bar[kk], kk));
                     is_ever_nnz[kk] = true;
+                    node->deg[k1]++;
+                    node->deg[k2]++;
                 }
             }
         }
@@ -240,33 +251,57 @@ class MultiBiFactor : public Factor{
             Float* y_bar = node->y_bar;
             Float gmin = 0.0;
             int min_index = -1;
-            for (int k1 = 0; k1 < K; k1++){
+            
+            int k1k2 = sorted_c[search_pointer].second;
+            while (search_pointer < K*K-1 && inside[k1k2]){
+                search_pointer++;
+                k1k2 = sorted_c[search_pointer].second;
+            }
+            if (sorted_c[search_pointer].first < 0.0){
+                min_index = k1k2;
+            }
+
+            /*for (int k1 = 0; k1 < K; k1++){
                 for (int k2 = k1 + 1; k2 < K; k2++){
                     int k1k2 = k1*K+k2;
                     assert(k1 < k2);
                     if (inside[k1k2]) continue;
                     Float* Ybar = Y_bar[k1k2];
+                    assert(fabs(Ybar[3]) < nnz_tol);
+                    assert(fabs(Ybar[2]) < nnz_tol);
+                    assert(fabs(Ybar[1]) < nnz_tol);
+                    assert(fabs(y_bar[k1]) < nnz_tol || fabs(y_bar[k2]) < nnz_tol);
                     Float msgl = Ybar[3] + Ybar[2] - y_bar[k1];
                     Float msgr = Ybar[3] + Ybar[1] - y_bar[k2];
-                    Float g = c[k1k2] + rho * (msgl + msgr);
+                    Float g = c[k1k2]; //+ rho * (msgl + msgr);
                     if (g < gmin){
                         gmin = g;
                         min_index = k1k2;
                     }
-                    /*g = rho * min(msgl, msgr);
-                    if (g < gmin){
-                        gmin = g;
-                        min_index = k1k2;
-                    }*/
                 }
-            }
+            }*/
             searched_index = min_index;
             if (debug){
                 //cerr << "bi_searched_index=" << searched_index << ", grad=" << gmin << ", c*=" << c[searched_index] << endl;
             }
             if (min_index != -1){
-                inside[min_index] = true; 
-                act_set.push_back(make_pair(Y[min_index], min_index));
+                inside[min_index] = true;
+                int k1 = min_index / K, k2 = min_index % K;
+                Float yl = node->y[k1];
+                Float yr = node->y[k2];
+                Float* Ykk = Y[min_index];
+                Float* Ybar = Y_bar[min_index];
+                Ykk[3] = 0;
+                Ykk[2] = yl;
+                Ykk[1] = yr;
+                Ykk[0] = 1-yr-yl;
+                Ybar[3] = 0;
+                Ybar[2] = y_bar[k1];
+                Ybar[1] = y_bar[k2];
+                Ybar[0] = 1-yl-yr;
+                sum_Y_bar[k1] += y_bar[k1];
+                sum_Y_bar[k2] += y_bar[k2];
+                act_set.push_back(make_pair(Ykk, min_index));
             }
         }
 
@@ -393,6 +428,7 @@ class MultiBiFactor : public Factor{
                         if (!is_ever_nnz[k1k2]){
                             is_ever_nnz[k1k2] = true;
                             ever_nnz_Y_bar.push_back(make_pair(Ybar, searched_index));
+                            node->deg[k1]++; node->deg[k2]++;
                         }
                     } else {
                         inside[k1k2] = false;
@@ -482,16 +518,17 @@ class MultiBiFactor : public Factor{
         inline Float infea(){
 			Float p_inf = 0.0;
 			Float* y = node->y;
-			for (int k1 = 0; k1 < K; k1++){
-                for (int k2 = k1+1; k2 < K; k2++){
-                    Float* Ykk = Y[k1*K+k2];
-				    Float inf = fabs(Ykk[2] + Ykk[3] - y[k1]);
-                    if (inf > p_inf)
-                        p_inf = inf;
-				    inf = fabs(Ykk[1] + Ykk[3] - y[k2]);
-                    if (inf > p_inf)
-                        p_inf = inf;
-                }
+			for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                Float* Ykk = it->first;
+                int k1k2 = it->second;
+                int k1 = k1k2 / K, k2 = k1k2 % K;
+                //cerr << Ykk[0] << " " << Ykk[1] << " " << Ykk[2] << " " << Ykk[3] << endl;
+                Float inf = fabs(Ykk[2] + Ykk[3] - y[k1]);
+                if (inf > p_inf)
+                    p_inf = inf;
+                inf = fabs(Ykk[1] + Ykk[3] - y[k2]);
+                if (inf > p_inf)
+                    p_inf = inf;
 			}
 			return p_inf;
 		}
@@ -639,7 +676,7 @@ inline void MultiUniFactor::subsolve(){
         for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
             int k = it->second;
             Float t = sum_Y_bar[k] - c[k]/rho;
-            t /= (K-1);
+            t /= deg[k];
             t -= (y_bar[k] - it->first);
             if (debug){
                 //cerr << "k=" << k << ", t=" << t << endl;
@@ -690,6 +727,8 @@ inline void MultiUniFactor::subsolve(){
                         inside_Y[k1k2] = true;
                         ever_nnz_Y[k1k2] = true;
                         ever_nnz_Y_bar.push_back(make_pair(Y_bar[k1k2], k1k2));
+                        deg[k1]++;
+                        deg[k2]++;
                     }
                 }
                 
@@ -722,7 +761,7 @@ inline Float MultiUniFactor::dual_inf(){
     for (vector<pair<Float, int>>::iterator uni_msg = ever_nnz_y_bar.begin(); uni_msg != ever_nnz_y_bar.end(); uni_msg++){
         Float ybar = uni_msg->first;
         int k = uni_msg->second;
-        grad[k] += rho * ybar * (K-1);
+        grad[k] += rho * ybar * deg[k];
     }
     //max gradient inside active set
     Float gmax = 0.0;
