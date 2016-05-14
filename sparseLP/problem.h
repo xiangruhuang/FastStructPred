@@ -129,6 +129,192 @@ class Problem{
 		}
 };
 
+class MultiLabelProblem : public Problem{
+    public:
+		map<string, int> label_index_map;
+		vector<string> label_name_list;
+		map<string, int> node_index_map;
+		int K, D, N;
+        ScoreVec* sv;
+        Float** w;
+        MultiLabelProblem(Param* _param) : Problem(_param){}
+        ~MultiLabelProblem(){
+            label_index_map.clear();
+            label_name_list.clear();
+            node_index_map.clear();
+            for (int j = 0; j < D; j++)
+                delete[] w[j];
+            delete[] w;
+        }
+        void readTestData(char* fname){
+			ifstream fin(fname);
+			char* line = new char[LINE_LEN];
+
+			Int d = -1;
+			N = 0;
+			while( !fin.eof() ){
+				fin.getline(line, LINE_LEN);
+				string line_str(line);
+
+				if( line_str.length() < 2 && fin.eof() ){
+					continue;
+				}
+                
+                Instance* ins = new Instance();
+				vector<string> tokens = split(line_str, " ");
+				//get label index
+				Int lab_ind;
+				map<string,Int>::iterator it;
+                vector<string> labels = split(tokens[0], ",");
+                for (int i = 0; i < labels.size(); i++){
+                    string label = labels[i];
+                    if(  (it=label_index_map.find(label)) == label_index_map.end() ){
+                        lab_ind = label_index_map.size();
+                        label_index_map.insert(make_pair(label,lab_ind));
+                    }else
+                        lab_ind = it->second;
+                    ins->labels.push_back(lab_ind);
+                }
+
+				SparseVec* x = new SparseVec();
+				for(Int i=1;i<tokens.size();i++){
+					vector<string> kv = split(tokens[i],":");
+					Int ind = atoi(kv[0].c_str());
+					Float val = atof(kv[1].c_str());
+					x->push_back(make_pair(ind,val));
+
+					if( ind > d )
+						d = ind;
+				}
+
+				//compute c = -W^T x
+				Float* c = new Float[K];
+				memset(c, 0.0, sizeof(Float)*K);
+				for (SparseVec::iterator it = x->begin(); it != x->end(); it++){
+					Float* wj = w[it->first];
+					for (int k = 0; k < K; k++)
+						c[k] -= wj[k]*it->second;
+				}
+				x->clear();
+
+				ins->node_score_vecs.push_back(c);
+				int len = ins->labels.size();
+				ins->edge_score_vecs.push_back(sv);
+                data.push_back(ins);
+			}
+			fin.close();
+
+			d += 1; //bias
+			if( D < d )
+				D = d;
+
+			for(Int i=0;i<data.size();i++)
+				data[i]->T = data[i]->labels.size();
+
+			label_name_list.resize(label_index_map.size());
+
+			for(map<string,Int>::iterator it=label_index_map.begin(); it!=label_index_map.end(); it++){
+				label_name_list[it->second] = it->first;
+			}
+
+			//propagate address of label name list to all nodes
+			for (vector<Instance*>::iterator it_data = data.begin(); it_data != data.end(); it_data++){
+				Instance* ins = *it_data;
+				for (int t = 0; t < ins->T; t++){
+					ins->node_label_lists.push_back(&(label_name_list));
+				}
+			}
+
+			K = label_index_map.size();
+
+			delete[] line;
+		}
+
+		void readModel(char* fname){
+			ifstream fin(fname);
+			char* line = new char[LINE_LEN];
+			//first line, get K
+			fin.getline(line, LINE_LEN);
+			string line_str(line);
+			vector<string> tokens = split(line_str, "=");
+			K = stoi(tokens[1]);
+
+			//second line, get label_name_list
+			fin.getline(line, LINE_LEN);
+			line_str = string(line);
+			tokens = split(line_str, " ");
+
+			//token[0] is 'label', means nothing
+			for (Int i = 1; i < tokens.size(); i++){
+				label_name_list.push_back(tokens[i]);
+				label_index_map.insert(make_pair(tokens[i], (i-1)));
+			}
+
+			//third line, get D
+			fin.getline(line, LINE_LEN);
+			line_str = string(line);
+			tokens = split(line_str, "=");
+			D = stoi(tokens[1]);
+			//skip fourth line
+			fin.getline(line, LINE_LEN);
+			//next D lines: read w
+			w = new Float*[D];
+			for (Int j = 0; j < D; j++){
+				w[j] = new Float[K];
+				memset(w[j], 0, sizeof(Float)*K);
+				fin.getline(line, LINE_LEN);
+				line_str = string(line);
+				tokens = split(line_str, " ");
+				Float* wj = w[j];
+				for (vector<string>::iterator it = tokens.begin(); it != tokens.end(); it++){
+					vector<string> k_w = split(*it, ":");
+					Int k = stoi(k_w[0]);
+					wj[k] = stof(k_w[1]);
+				}
+			}
+
+			//skip next line
+			fin.getline(line, LINE_LEN);
+
+			//next K lines: read v
+			Float** v = new Float*[K];
+			for (Int k1 = 0; k1 < K; k1++){
+				v[k1] = new Float[K];
+				memset(v[k1], 0, sizeof(Float)*K);
+				fin.getline(line, LINE_LEN);
+				line_str = string(line);
+				tokens = split(line_str, " ");
+				Float* v_k1 = v[k1];
+				for (vector<string>::iterator it = tokens.begin(); it != tokens.end(); it++){
+					vector<string> k2_v = split(*it, ":");
+					Int k2 = stoi(k2_v[0]);
+					v_k1[k2] = stof(k2_v[1]);
+				}
+			}
+
+			Float* c = new Float[K*K];
+			for (int kk = 0; kk < K*K; kk++)
+				c[kk] = -v[kk/K][kk%K];
+
+			if (param->solver == 2){
+				//extra sorting time is counted
+				prediction_time -= omp_get_wtime();
+			}
+			//store them in ScoreVec
+			sv = new ScoreVec(c, K, K);
+
+			if (param->solver == 2){
+				//extra sorting time is counted
+				prediction_time += omp_get_wtime();
+			}
+		}
+
+        void construct_data(){
+            readModel(param->modelFname);
+            readTestData(param->testFname);
+        }
+};
+
 class CompleteGraphProblem : public Problem{
 	public:
 		map<string, int> label_index_map;

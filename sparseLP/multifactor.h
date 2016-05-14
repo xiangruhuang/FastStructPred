@@ -6,9 +6,8 @@
 
 extern Stats* stats;
 
-struct Cube22{
-    Float Y00, Y01, Y10, Y11;
-};
+extern bool debug;
+bool shrink = false;
 
 class MultiBiFactor;
 
@@ -35,7 +34,6 @@ class MultiUniFactor : public Factor{
         Float* y;
         Float* y_bar;
         MultiBiFactor* edge; // assume only one edge connects to it
-        
 
         inline MultiUniFactor(int _K, Float* _c, Param* param){
             K = _K;
@@ -59,7 +57,9 @@ class MultiUniFactor : public Factor{
             y = new Float[K];
             memset(y, 0, sizeof(Float)*K);
             y_bar = new Float[K];
-            memset(y, 0, sizeof(Float)*K);
+            memset(y_bar, 0, sizeof(Float)*K);
+
+            fill_act_set();
         }
 
         ~MultiUniFactor(){
@@ -69,6 +69,15 @@ class MultiUniFactor : public Factor{
             delete[] y_bar;
             delete[] grad;
             delete[] cache;
+        }
+
+        inline void fill_act_set(){
+            for (int i = 0; i < K; i++){
+                act_set.push_back(make_pair(0.0, i));
+                inside[i] = true;
+                is_ever_nnz[i] = true;
+                ever_nnz_y_bar.push_back(make_pair(0.0, i));
+            }
         }
 
         inline void search();
@@ -82,14 +91,16 @@ class MultiUniFactor : public Factor{
         inline void subsolve();
 
         inline void update_multipliers(){
+            stats->maintain_time -= get_current_time();
             for (vector<pair<Float, int>>::iterator it = ever_nnz_y_bar.begin(); it != ever_nnz_y_bar.end(); it++){
                 int k = it->second;
                 it->first += y[k] * eta;
-                y_bar[k] += y[k] * eta;
+                y_bar[k] = it->first;
             }
+            stats->maintain_time += get_current_time();
         }
 
-        inline Float Score(){
+        inline Float score(){
 			Float score = 0.0;
 			for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
 				int k = it->second;
@@ -121,6 +132,19 @@ class MultiUniFactor : public Factor{
         
         int dinf_index = -1;
         inline Float dual_inf();
+
+
+        //y_bar == ever_nnz_y_bar
+        //y == act_set
+        inline void check_integrity(){
+            for (vector<pair<Float, int>>::iterator it = ever_nnz_y_bar.begin(); it != ever_nnz_y_bar.end(); it++){
+                assert(fabs(it->first - y_bar[it->second]) < nnz_tol);
+            }
+            for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                assert(fabs(it->first - y[it->second]) < nnz_tol);
+            }
+        }
+
 };
 
 class MultiBiFactor : public Factor{
@@ -132,18 +156,18 @@ class MultiBiFactor : public Factor{
         Float* c;
         Float nnz_tol;
 
-        Cube22* Y;
-        Cube22* Y_bar;
+        Float** Y;
+        Float** Y_bar;
 
         //maintained
-        vector<pair<Cube22, int>> act_set; // <active_y, active_index>
+        vector<pair<Float*, int>> act_set; // <active_y, active_index>
         bool* inside;
         bool* is_ever_nnz;
         int searched_index;
         MultiUniFactor* node; // assume only one node connects to it
 
         //can be accessed and should be maintained
-        vector<pair<Cube22, int>> ever_nnz_Y_bar; // <y_bar, index>
+        vector<pair<Float*, int>> ever_nnz_Y_bar; // <y_bar, index>
         Float* sum_Y_bar; // sum_Y_bar(k) = \sum_{k2} (Y_bar^01(k2, k) + Y_bar^{11}(k2, k) + Y_bar^10(k, k2) + Y_bar^{11}(k, k2))
         
 
@@ -156,15 +180,13 @@ class MultiBiFactor : public Factor{
             node = _node;
             node->edge = ((MultiBiFactor*)this);
             
-            Y = new Cube22[K*K];
+            Y = new Float*[K*K];
             for (int kk = 0; kk < K*K; kk++){
-                Y[kk].Y00 = 0.0; Y[kk].Y01 = 0.0;
-                Y[kk].Y10 = 0.0; Y[kk].Y11 = 0.0;
+                Y[kk] = zero_cube();
             }
-            Y_bar = new Cube22[K*K];
+            Y_bar = new Float*[K*K];
             for (int kk = 0; kk < K*K; kk++){
-                Y_bar[kk].Y00 = 0.0; Y_bar[kk].Y01 = 0.0;
-                Y_bar[kk].Y10 = 0.0; Y_bar[kk].Y11 = 0.0;
+                Y_bar[kk] = zero_cube();
             }
             sum_Y_bar = new Float[K];
             memset(sum_Y_bar, 0.0, sizeof(Float)*K);
@@ -172,14 +194,41 @@ class MultiBiFactor : public Factor{
             memset(inside, 0, sizeof(bool)*K*K);
             is_ever_nnz = new bool[K*K];
             memset(is_ever_nnz, 0, sizeof(bool)*K*K);
+            
+            //just for test
+            fill_act_set();
         }
 
         ~MultiBiFactor(){
+            for (int k = 0; k < K*K; k++){
+                delete[] Y[k];
+            }
             delete[] Y;
+            for (int k = 0; k < K*K; k++){
+                delete[] Y_bar[k];
+            }
             delete[] Y_bar;
             delete[] sum_Y_bar;
             delete[] is_ever_nnz;
             delete[] inside;
+        }
+
+        inline Float* zero_cube(){
+            Float* cube = new Float[4];
+            cube[0] = 0;
+            cube[1] = 0;
+            cube[2] = 0;
+            cube[3] = 0;
+            return cube;
+        }
+
+        inline void fill_act_set(){
+            for (int kk = 0; kk < K*K; kk++){
+                act_set.push_back(make_pair(Y[kk], kk));
+                inside[kk] = true;
+                ever_nnz_Y_bar.push_back(make_pair(Y_bar[kk], kk));
+                is_ever_nnz[kk] = true;
+            }
         }
 
         inline void naive_search(){
@@ -190,27 +239,32 @@ class MultiBiFactor : public Factor{
                 for (int k2 = 0; k2 < K; k2++){
                     int k1k2 = k1*K+k2;
                     if (inside[k1k2]) continue;
-                    Cube22& Ybar = Y_bar[k1k2];
-                    Float g = c[k1k2] + rho * (Ybar.Y11*2 + Ybar.Y10 + Ybar.Y01  - y_bar[k1] - y_bar[k2]);
+                    Float* Ybar = Y_bar[k1k2];
+                    Float msgl = Ybar[3] + Ybar[2] - y_bar[k1];
+                    Float msgr = Ybar[3] + Ybar[1] - y_bar[k2];
+                    Float g = c[k1k2] + rho * (msgl + msgr);
                     if (g < gmin){
                         gmin = g;
                         min_index = k1k2;
                     }
+                    /*g = rho * min(msgl, msgr);
+                    if (g < gmin){
+                        gmin = g;
+                        min_index = k1k2;
+                    }*/
                 }
             }
             searched_index = min_index;
-            cerr << "bi_searched_index=" << searched_index << ", gmin=" << gmin << endl;
+            if (debug){
+                //cerr << "bi_searched_index=" << searched_index << ", grad=" << gmin << ", c*=" << c[searched_index] << endl;
+            }
             if (min_index != -1){
                 inside[min_index] = true;
-                Cube22 cube;
-                cube.Y00 = 0.0;
-                cube.Y01 = 0.0;
-                cube.Y10 = 0.0;
-                cube.Y11 = 0.0;
-                act_set.push_back(make_pair(cube, min_index));
+                act_set.push_back(make_pair(Y[min_index], min_index));
             }
         }
 
+        //bi_search()
         inline void search(){
             stats->bi_search_time -= get_current_time();
             naive_search();
@@ -224,156 +278,312 @@ class MultiBiFactor : public Factor{
             stats->bi_subsolve_time -= get_current_time();        
 
             Float A = rho * 4;
-            Cube22* Y_new = new Cube22[act_set.size()];
+            Float* Y_new = new Float[4]; 
 
             int act_count = 0;
-            if (fabs(A) < 1e-12){
+            vector<pair<Float*, int>> next_act_set;
+            if (fabs(rho) < 1e-12){
 				act_count = 0;
-                for (vector<pair<Cube22, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+                for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 					int k1k2 = it->second;
-					if (c[k1k2] <= 0){
-						Y_new[act_count].Y11 = 1.0;
-                        Y_new[act_count].Y10 = 0.0;
-                        Y_new[act_count].Y01 = 0.0;
-                        Y_new[act_count].Y00 = 0.0;
+					Float* Y_old = it->first;
+                    if (c[k1k2] <= 0){
+						Y_new[3] = 1.0;
+                        Y_new[2] = 0.0;
+                        Y_new[1] = 0.0;
+                        Y_new[0] = 0.0;
                     } else {
-						Y_new[act_count].Y11 = 0.0;
-                        Y_new[act_count].Y10 = 0.0;
-                        Y_new[act_count].Y01 = 0.0;
-                        Y_new[act_count].Y00 = 1.0;
+						Y_new[3] = 0.0;
+                        Y_new[2] = 0.0;
+                        Y_new[1] = 0.0;
+                        Y_new[0] = 1.0;
                     }
+                    int k1 = k1k2 / K, k2 = k1k2 % K;
+                    Float* Ybar = Y_bar[k1k2];
+                    //01
+                    Float delta_y = Y_new[1] - Y_old[1];
+                    sum_Y_bar[k2] += delta_y;
+                    Ybar[1] += delta_y;
+                    //10
+                    delta_y = Y_new[2] - Y_old[2];
+                    sum_Y_bar[k1] += delta_y;
+                    Ybar[2] += delta_y;
+                    //11
+                    delta_y = Y_new[3] - Y_old[3];
+                    sum_Y_bar[k2] += delta_y;
+                    sum_Y_bar[k1] += delta_y;
+                    Ybar[3] += delta_y;
+
+                    //Y[k1k2] = new_cube;
+
+                    Y_old[3] = Y_new[3];
+                    Y_old[2] = Y_new[2];
+                    Y_old[1] = Y_new[1];
+                    Y_old[0] = Y_new[0];
+                    //shrink
+                    if (true || fabs(Y_new[3]) > nnz_tol ){
+                        next_act_set.push_back(make_pair(Y_old, k1k2));
+                        if (searched_index == k1k2 && !is_ever_nnz[k1k2]){
+                            is_ever_nnz[k1k2] = true;
+                            ever_nnz_Y_bar.push_back(make_pair(Ybar, searched_index));
+                        }
+                    } else {
+                        inside[k1k2] = false;
+                    }
+
 				}
+
             } else {
                 Float* b = new Float[4];
-                Float* Y_new_cube = new Float[4];
                 act_count = 0;
                 Float* y_bar = node->y_bar;
-                for (vector<pair<Cube22, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+                for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 					int k1k2 = it->second;
                     int k1 = k1k2 / K, k2 = k1k2 % K;
-                    Cube22& cube = it->first;
-                    Cube22 bar = Y_bar[k1k2];
-                    Float ybar_k1 = y_bar[k1], ybar_k2 = y_bar[k2];
-                    Float msgl = bar.Y10 + bar.Y11 - (cube.Y10 + cube.Y11) - ybar_k1;
-                    Float msgr = bar.Y01 + bar.Y11 - (cube.Y01 + cube.Y11) - ybar_k2;
-                    b[0] = cube.Y00;
-                    b[1] = cube.Y01 - rho / A * msgr;
-                    b[2] = cube.Y10 - rho / A * msgl;
-                    b[3] = cube.Y11 - (rho * (msgl + msgr) + c[k1k2]) / A;
+                    Float* Y_old = it->first;
+                    Float* Ybar = Y_bar[k1k2];
+                    //Float ybar_k1 = y_bar[k1], ybar_k2 = y_bar[k2];
+                    Float ml = rho/A*(Ybar[2] + Ybar[3] - y_bar[k1]);
+                    Float mr = rho/A*(Ybar[1] + Ybar[3] - y_bar[k2]);
 
-                    cerr << "b:\t" << b[0] << " " << b[1] << " " << b[2] << " " << b[3] << endl;
+                    if (debug && k1k2 == dinf_index){
+                        //cerr << "k1k2=" << k1k2 << ", ml=" << ml << ", mr=" << mr << endl;
+                    }
+                    b[0] = Y_old[0];
+                    b[1] = Y_old[1] - mr;
+                    b[2] = Y_old[2] - ml;
+                    b[3] = Y_old[3] - (ml + mr) - (c[k1k2] / A);
+                    
+                    //if (k1k2 == 74)
+                    //    cerr << "k1k2=" << k1k2 << ", c=" << c[k1k2] << ", b:\t" << b[0] << " " << b[1] << " " << b[2] << " " << b[3] << ", ml=" << ml << ", mr=" << mr << endl;
 
-                    solve_simplex(4, Y_new_cube, b);
-                    Y_new[act_count].Y11 = Y_new_cube[3];
-                    Y_new[act_count].Y10 = Y_new_cube[2];
-                    Y_new[act_count].Y01 = Y_new_cube[1];
-                    Y_new[act_count].Y00 = Y_new_cube[0];
+                    solve_simplex(4, Y_new, b);
+
+                    //update Y_bar, sum_Y_bar, Y
+                    
+                    //01
+                    Float delta_y = Y_new[1] - Y_old[1];
+                    sum_Y_bar[k2] += delta_y;
+                    Ybar[1] += delta_y;
+                    //10
+                    delta_y = Y_new[2] - Y_old[2];
+                    sum_Y_bar[k1] += delta_y;
+                    Ybar[2] += delta_y;
+                    //11
+                    delta_y = Y_new[3] - Y_old[3];
+                    sum_Y_bar[k2] += delta_y;
+                    sum_Y_bar[k1] += delta_y;
+                    Ybar[3] += delta_y;
+
+                    //Y[k1k2] = new_cube;
+
+                    Y_old[3] = Y_new[3];
+                    Y_old[2] = Y_new[2];
+                    Y_old[1] = Y_new[1];
+                    Y_old[0] = Y_new[0];
+                    //shrink
+                    if (true || fabs(Y_new[3]) > nnz_tol ){
+                        next_act_set.push_back(make_pair(Y_old, k1k2));
+                        if (searched_index == k1k2 && !is_ever_nnz[k1k2]){
+                            is_ever_nnz[k1k2] = true;
+                            ever_nnz_Y_bar.push_back(make_pair(Ybar, searched_index));
+                        }
+                    } else {
+                        inside[k1k2] = false;
+                    }
+
                 }
-                delete[] Y_new_cube;
             }
 
-            //update Y_bar, sum_Y_bar, Y
-            act_count = 0;
-            for (vector<pair<Cube22, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+            stats->bi_subsolve_time += get_current_time();            
+
+            act_set = next_act_set;
+
+            //update ever_nnz_Y_bar
+            /*for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
                 int k1k2 = it->second;
-                Cube22& old_cube = it->first;
-                Cube22& new_cube = Y_new[act_count];
-                Cube22& Ybar = Y_bar[k1k2];
-                int k1 = k1k2 / K, k2 = k1k2 % K;
-                //00
-                Float delta_y = new_cube.Y00 - old_cube.Y00;
-                Ybar.Y00 += delta_y;
-                //01
-                delta_y = new_cube.Y01 - old_cube.Y01;
-                sum_Y_bar[k2] += delta_y;
-                Ybar.Y01 += delta_y;
-                //10
-                delta_y = new_cube.Y10 - old_cube.Y10;
-                sum_Y_bar[k1] += delta_y;
-                Ybar.Y10 += delta_y;
-                //11
-                delta_y = new_cube.Y11 - old_cube.Y11;
-                sum_Y_bar[k2] += delta_y;
-                sum_Y_bar[k1] += delta_y;
-                Ybar.Y11 += delta_y;
-
-                it->first = new_cube;
-                Y[k1k2] = new_cube;
-            }
-
-            //update ever_nnz_Y_bar 
-            for (vector<pair<Cube22, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
-                int k1k2 = it->second;
-                it->first = Y_bar[k1k2];
-            }
-            if (searched_index != -1 && !is_ever_nnz[searched_index]){
-                is_ever_nnz[searched_index] = true;
-                Cube22 cube = Y_bar[searched_index];
-                ever_nnz_Y_bar.push_back(make_pair(cube, searched_index));
-            }
+                Float* Ybar = it->first;
+            }*/
 
             delete[] Y_new;
 
-            stats->bi_subsolve_time += get_current_time();            
         }
 
         //update Y_bar, sum_Y_bar
         inline void update_multipliers(){
-            for (vector<pair<Cube22, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
+            stats->maintain_time -= get_current_time();
+            for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
                 int k1k2 = it->second;
-                Cube22& cube_y = Y[k1k2];
-                Cube22& ybar = it->first;
-                ybar.Y00 += eta*cube_y.Y00;
-                ybar.Y10 += eta*cube_y.Y10;
-                ybar.Y01 += eta*cube_y.Y01;
-                ybar.Y11 += eta*cube_y.Y11;
-                Y_bar[k1k2] = ybar; //= it->first;
+                Float* YY = Y[k1k2];
+                Float* Ybar = it->first;
+                Ybar[2] += eta*YY[2];
+                Ybar[1] += eta*YY[1];
+                Ybar[3] += eta*YY[3];
                 int k1 = k1k2 / K, k2 = k1k2 % K;
-                sum_Y_bar[k1] += eta*(cube_y.Y10 + cube_y.Y11);
-                sum_Y_bar[k2] += eta*(cube_y.Y01 + cube_y.Y11);
+                sum_Y_bar[k1] += eta*(YY[2] + YY[3]);
+                sum_Y_bar[k2] += eta*(YY[1] + YY[3]);
             }
+            stats->maintain_time += get_current_time();
         }
         
+        inline Float func_val(int k1k2){
+            Float* ybar = node->y_bar;
+            Float* Ybar = Y_bar[k1k2];
+            Float val = 0.0;
+            int k1 = k1k2 / K, k2 = k1k2 % K;
+            Float msgl = Ybar[3] + Ybar[2] - ybar[k1];
+            Float msgr = Ybar[3] + Ybar[1] - ybar[k2];
+            val = rho/2*(msgl * msgl + msgr * msgr) + c[k1k2]*Y[k1k2][3];
+            return val;
+        }
+
         inline void display(){
 
 			cerr << endl;
             cerr << "Y:\t";
-			for (vector<pair<Cube22, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+			for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
 				int kk = it->second;
                 int k1 = kk / K, k2 = kk % K;
-				cerr << "(" << k1 << "," << k2 << ")" << ":" << it->first.Y00 << "," << it->first.Y01 << "," << it->first.Y10 << "," << it->first.Y11 << " ";
+				cerr << "(" << k1 << "," << k2 << ")" << ":" << it->first[0] << "," << it->first[1] << "," << it->first[2] << "," << it->first[3] << " ";
 			}
 			cerr << endl;
             cerr << "Ybar:\t";
-			for (vector<pair<Cube22, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
+			for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
 				int kk = it->second;
                 int k1 = kk / K, k2 = kk % K;
-				cerr << "(" << k1 << "," << k2 << ")" << ":" << it->first.Y00 << "," << it->first.Y01 << "," << it->first.Y10 << "," << it->first.Y11 << " ";
+				cerr << "(" << k1 << "," << k2 << ")" << ":" << it->first[0] << "," << it->first[1] << "," << it->first[2] << "," << it->first[3] << " ";
 			}
+            cerr << endl;
 
+            cerr << "sum_Y_bar:\t";
+            for (int k = 0; k < K; k++){
+                if (fabs(sum_Y_bar[k]) > nnz_tol){
+                    cerr << k << ":" << sum_Y_bar[k] << " ";
+                }
+            }
+            cerr << endl;
 		}
+
+        inline Float score(){
+			Float score = 0.0;
+            for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+				int kk = it->second;
+                score += it->first[3] * c[kk];
+            }
+            return score;
+        }
+		
+        inline Float infea(){
+			Float p_inf = 0.0;
+			Float* y = node->y;
+			for (int k1 = 0; k1 < K; k1++){
+                for (int k2 = 0; k2 < K; k2++){
+                    Float* Ykk = Y[k1*K+k2];
+				    Float inf = fabs(Ykk[2] + Ykk[3] - y[k1]);
+                    if (inf > p_inf)
+                        p_inf = inf;
+				    inf = fabs(Ykk[1] + Ykk[3] - y[k2]);
+                    if (inf > p_inf)
+                        p_inf = inf;
+                }
+			}
+			return p_inf;
+		}
+
+        int dinf_index = -1;
+        //bi_dual_inf
+        inline Float dual_inf(){
+            Float dinf = 0.0;
+            Float g = 0.0;
+            dinf_index = -1;
+            Float* y_bar = node->y_bar;
+            for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                //compute gradient of each entry
+                int k1k2 = it->second;
+                int k1 = k1k2 / K, k2 = k1k2 % K;
+                Float* Ykk = it->first;
+                Float* Ybar = Y_bar[k1k2];
+                Float msgl = Ybar[2] + Ybar[3] - y_bar[k1];
+                Float msgr = Ybar[1] + Ybar[3] - y_bar[k2];
+                Float* grad = new Float[4];
+                grad[3] = c[k1k2] + rho*(msgl + msgr);
+                grad[2] = rho*(msgl);
+                grad[1] = rho*(msgr);
+                grad[0] = 0;
+                Float gmin = min(grad[1], grad[0]);
+                gmin = min(grad[2], gmin);
+                gmin = min(grad[3], gmin);
+                Float dp = Ykk[3] * grad[3] + Ykk[2] * grad[2] + Ykk[1] * grad[1];
+                
+                if (-(gmin-dp) > dinf){
+                    dinf = -(gmin-dp);
+                    dinf_index = k1k2;
+                }
+                //cerr << ", gmax=" << gmax << ", dinf_index=" << dinf_index << endl;
+            }
+            Float* YY;
+            if (dinf_index != -1){
+                YY = Y[dinf_index];
+            }
+            if (debug){
+                //cerr << "edge_dinf: dinf_index=" << dinf_index << " ,dinf=" << dinf << ", cube=(" << YY.Y00 << "," << YY.Y01 << "," << YY.Y10 << "," << YY.Y11 << ")" << endl;
+            }
+            return dinf;
+        }
+        
+        //y_bar == ever_nnz_y_bar
+        //y == act_set
+        //sum_Y_bar
+        inline void check_integrity(){
+            
+            for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
+                assert(it->first == Y_bar[it->second]);
+            }
+            for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+                assert(it->first == Y[it->second]);
+            }
+            
+            //check sum_Y_bar
+            Float* temp = new Float[K];
+            memset(temp, 0.0, sizeof(Float)*K);
+            for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
+                Float* Ybar = it->first;
+                int k1k2 = it->second;
+                int k1 = k1k2 / K, k2 = k1k2 % K;
+                temp[k1] += Ybar[2] + Ybar[3];
+                temp[k2] += Ybar[1] + Ybar[3];
+            }
+            for (int k = 0; k < K; k++){
+                if (fabs(temp[k] - sum_Y_bar[k]) >= nnz_tol){
+                    cerr << "k=" << k << ", sum=" << sum_Y_bar[k] << ", temp=" << temp[k] << endl;
+                }
+                assert(fabs(temp[k] - sum_Y_bar[k]) < nnz_tol);
+            }
+            delete[] temp;
+        }
 };
         
 inline void MultiUniFactor::search(){
     stats->uni_search_time -= get_current_time();
     //compute gradient = c - rho \sum msg = c + K rho y_bar - rho \sum Y_bar
     for (int k = 0; k < K; k++){
-        grad[k] = c[k] - rho * edge->sum_Y_bar[k];
+        grad[k] = c[k];
+        //- rho * edge->sum_Y_bar[k];
     }
-    for (vector<pair<Float, int>>::iterator uni_msg = ever_nnz_y_bar.begin(); uni_msg != ever_nnz_y_bar.end(); uni_msg++){
+    /*for (vector<pair<Float, int>>::iterator uni_msg = ever_nnz_y_bar.begin(); uni_msg != ever_nnz_y_bar.end(); uni_msg++){
         Float ybar = uni_msg->first;
         int k = uni_msg->second;
         grad[k] += rho * ybar * K;
-    }
+    }*/
 
-    /*vector<pair<Cube22, int>>& ever_nnz_Y_bar = edge->ever_nnz_Y_bar;
-      for (vector<pair<Cube22, int>>::iterator bi_msg = ever_nnz_Y_bar.begin(); bi_msg != ever_nnz_Y_bar.end(); bi_msg++){
-      int k1k2 = bi_msg->second;
-      Cube22& Y_bar = bi_msg->first;
-      int k1 = k1k2 / K, k2 = k1k2 % K;
-      grad[k1] -= rho*(Y_bar.Y10 + Y_bar.Y11);
-      grad[k2] -= rho*(Y_bar.Y01 + Y_bar.Y11);
-      }*/
+    vector<pair<Float*, int>>& ever_nnz_Y_bar = edge->ever_nnz_Y_bar;
+    for (vector<pair<Float*, int>>::iterator it = ever_nnz_Y_bar.begin(); it != ever_nnz_Y_bar.end(); it++){
+        Float* Ybar = it->first;
+        int k1k2 = it->second;
+        int k1 = k1k2 / K, k2 = k1k2 % K;
+        grad[k1] -= rho * (Ybar[2] + Ybar[3] - y_bar[k1]);
+        grad[k2] -= rho * (Ybar[1] + Ybar[3] - y_bar[k2]);
+    }
 
     Float gmax = 0.0;
     int max_index = -1;
@@ -388,7 +598,7 @@ inline void MultiUniFactor::search(){
     }
 
     searched_index = max_index;
-    cerr << "uni_searched_index=" << searched_index << ", grad=" << -gmax << endl;
+    //cerr << "uni_searched_index=" << searched_index << ", grad=" << -gmax << endl;
     if (max_index != -1){
         act_set.push_back(make_pair(0.0, max_index));
         inside[max_index] = true;
@@ -396,6 +606,7 @@ inline void MultiUniFactor::search(){
     stats->uni_search_time += get_current_time();
 }
 
+//uni_subsolve()
 inline void MultiUniFactor::subsolve(){
     if (act_set.size() == 0)
         return;
@@ -404,7 +615,9 @@ inline void MultiUniFactor::subsolve(){
     int act_count = 0;
     if (edge == NULL || fabs(rho) < 1e-12){
         //min_y <c, y>, no bigram at all.
-        cerr << "degenerated uni_subsolve!!!!!" << endl;
+        if (debug){
+            //cerr << "degenerated uni_subsolve!!!!!" << endl;
+        }
         act_count = 0;
         memset(y_new, 0.0, sizeof(Float)*act_set.size());
         for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
@@ -418,57 +631,42 @@ inline void MultiUniFactor::subsolve(){
         Float* sum_Y_bar = edge->sum_Y_bar;
         for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
             int k = it->second;
-            cache[k] = sum_Y_bar[k] - c[k]/rho;
-        }
-
-        /*act_count = 0;
-          vector<pair<Cube22, int>>& ever_nnz_Y_bar = edge->ever_nnz_msg;
-          for (vector<pair<Cube22, int>>::iterator bi_msg = ever_nnz_Y_bar.begin(); bi_msg != ever_nnz_Y_bar.end(); bi_msg++){
-          int k1k2 = bi_msg->second;
-          Cube22& Ybar = bi_msg->first;
-          int k1 = k1k2 / K, k2 = k1k2 % K;
-          cache[k1] += (Ybar.Y10 + Ybar.Y11);
-          cache[k2] += (Ybar.Y01 + Ybar.Y11);
-          }*/
-
-        act_count = 0;
-        for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-            int k = it->second;
-            cache[k] /= 2;
-            cache[k] -= (y_bar[k] - it->first);
-            if (cache[k] > 1.0)
-                cache[k] = 1.0;
-            if (cache[k] < 0.0)
-                cache[k] = 0.0;
-            y_new[act_count] = cache[k];
+            Float t = sum_Y_bar[k] - c[k]/rho;
+            t /= (2*K);
+            t -= (y_bar[k] - it->first);
+            if (debug){
+                //cerr << "k=" << k << ", t=" << t << endl;
+            }
+            //t += y[k];
+            if (t > 1.0)
+                t = 1.0;
+            if (t < 0.0)
+                t = 0.0;
+            y_new[act_count] = t;
+            //cerr << "k=" << k << ", t=" << t << ", sum_Y_bar=" << sum_Y_bar[k] << ", y_bar[k]=" << y_bar[k] << ", y[k]=" << y[k] << endl;
         }
     }
 
+    //cerr << endl;
     //update y_bar, y
 
-    act_count = 0;
-    for (vector<pair<Float, int>>::iterator it = ever_nnz_y_bar.begin(); it != ever_nnz_y_bar.end(); it++, act_count++){
-        int k = it->second;
-        Float delta_y = y_new[act_count] - y[k];
-        it->first += delta_y;
-        y_bar[k] = it->first;
-    }
 
     vector<pair<Float, int>> next_act_set;
     next_act_set.clear();
     act_count = 0;
     for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
         int k = it->second;
+        Float delta_y = y_new[act_count] - it->first;
         it->first = y_new[act_count];
         y[k] = it->first;
         //shrink
-        if (it->first >= nnz_tol ){
+        if (!shrink || it->first >= nnz_tol){
             //this index is justed added by search()
             //Only if this index is active after subsolve, then it's added to ever_nnz_y_bar
+            y_bar[k] += delta_y;
             if (k == searched_index && !is_ever_nnz[k]){
-                cerr << "y[k]=" << it->first << endl;
+                //cerr << "y[k]=" << it->first << endl;
                 ever_nnz_y_bar.push_back(make_pair(it->first, k));
-                y_bar[k] = it->first;
                 is_ever_nnz[k] = true;
                 //adding_ever_nnz_msg(k);
             }
@@ -478,11 +676,19 @@ inline void MultiUniFactor::subsolve(){
         }
     }
     act_set = next_act_set;
+    
+    act_count = 0;
+    for (vector<pair<Float, int>>::iterator it = ever_nnz_y_bar.begin(); it != ever_nnz_y_bar.end(); it++, act_count++){
+        int k = it->second;
+        it->first = y_bar[k];
+    }
+    //cerr << endl;
 
     delete[] y_new;
     stats->uni_subsolve_time += get_current_time();
 }
 
+//uni_dual_inf
 inline Float MultiUniFactor::dual_inf(){
     for (int k = 0; k < K; k++){
         grad[k] = c[k] - rho * edge->sum_Y_bar[k];
@@ -490,7 +696,7 @@ inline Float MultiUniFactor::dual_inf(){
     for (vector<pair<Float, int>>::iterator uni_msg = ever_nnz_y_bar.begin(); uni_msg != ever_nnz_y_bar.end(); uni_msg++){
         Float ybar = uni_msg->first;
         int k = uni_msg->second;
-        grad[k] += rho * ybar * K;
+        grad[k] += rho * ybar * 2 * K;
     }
     //max gradient inside active set
     Float gmax = 0.0;
@@ -505,6 +711,9 @@ inline Float MultiUniFactor::dual_inf(){
             gmax = grad[k];
             dinf_index = k;
         }
+    }
+    if (debug){
+        //cerr << "dinf_index=" << dinf_index << " ,grad=" << grad[dinf_index] << endl;
     }
     return gmax;
 }

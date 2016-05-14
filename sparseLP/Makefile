@@ -44,8 +44,10 @@ OCR.fea.tmp:
 	$(eval model := OCR.fea.model)
 	./predict -p chain -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model) 
 
-test:
-	./predict -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  XXX YYY
+yeast:
+	$(eval test_file := $(data_dir)/yeast_test.svm)
+	$(eval model := yeast.model)
+	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
 
 #
 #speech:

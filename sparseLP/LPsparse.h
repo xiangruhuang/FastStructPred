@@ -39,8 +39,8 @@ class LP_Param{
 		use_CG = false;
 		
 		tol = 1e-4;
-		tol_trans = 10*tol;
-		//tol_trans = 0.1;
+		//tol_trans = 10*tol;
+		tol_trans = -1;
 		tol_sub = 0.5*tol_trans;
 		
 		eta = 1.0;
@@ -166,7 +166,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 					active_size--;
 					swap( index[s], index[active_size] );
 					s--;
-					inside[j] = false;
+//					inside[j] = false;
 					continue;
 				}else if( g < 0.0 ){
 					PG = fabs(g);
@@ -246,9 +246,9 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 				//cerr << "reach max_num_linesearch" << endl;
 				return;
 			}
-		    //cerr << "updating j=" << j << ", d=" << d << endl;	
 			//update x_j
 			x[j] += d;
+            //cerr << "updating j=" << j << ", d=" << d << ", x^+=" << x[j] << endl;	
 		}
 		iter++;
 		if( iter % 10 == 0 ){
@@ -261,7 +261,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		
 		if( PGmax_new <= param->tol_sub || iter == inner_max_iter ){ //reach stopping criteria
 			
-			cerr << "\tinner rcd iter=" << iter << ", act=" << active_size << "/" << (n+nf) << ", gmax=" << PGmax_new << endl;
+			//cerr << "\tinner rcd iter=" << iter << ", act=" << active_size << "/" << (n+nf) << ", gmax=" << PGmax_new << endl;
 			break;
 		}
 	}
@@ -395,7 +395,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 				w[it->first] += tmp * it->second;
 		}
 	
-		/*if( phase == 1 && pinf <= param->tol_trans ){
+		if( phase == 1 && pinf <= param->tol_trans ){
 			
 			phase = 2;
 			print_per_iter = 1;
@@ -440,7 +440,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 					w[i] /= 2;
 			}
 			
-		}*/
+		}
 		dinf_last = dinf;
 		pinf_last = pinf;
 		gap_last = gap;
@@ -488,6 +488,102 @@ class LP_Problem{
 
 LP_Problem* construct_LP(Instance* ins, Param* param){
 	LP_Problem* ins_pred_prob = new LP_Problem();
+    if (param->problem_type == "multilabel"){
+		int K = ins->node_label_lists[0]->size();
+        int M = K*(K-1)/2; //number of bigram factor
+		int m = 0, nf=0, n=K+M*4, me=2*M + M; //consistency + simplex
+		
+		ins_pred_prob->m = m;
+		ins_pred_prob->nf = nf;
+		ins_pred_prob->n = n;
+		ins_pred_prob->me = me;
+		
+		Constr* A = new Constr[m+me];
+		double* b = new double[m+me];
+		double* c = new double[n+nf];
+		
+        //unigram 
+        //cerr << "c:\t";
+        for(Int i=0;i<K;i++){
+            c[i] = ins->node_score_vecs[0][i];
+          //  cerr << c[i] << " ";
+        }
+        //cerr << endl;
+        
+        /*if( y != NULL ){ //loss-augmented decoding
+            for(Int k=0; k<K; k++){
+                if( find( y->begin(), y->end(), k ) == y->end() )
+                    c[k] -= 1.0;
+                else
+                    c[k] -= -1.0;
+            }
+        }*/
+
+        //cerr << "|||| ";
+        //bigram
+        for(Int i=K;i<K+M*4;i++)
+            c[i] = 0.0;
+		int ij4=0;
+        for(Int i=0;i<K; i++){
+            for(Int j=i+1; j<K; j++, ij4+=4){
+                c[ K + ij4 + 3 ] = ins->edge_score_vecs[0]->c[i*K+j];
+                //cerr << c[K+ij4+3] << " ";
+            }
+        }
+        //cerr << endl;
+       
+		int row=0;
+        ij4 = 0;
+        //construct consistency constraint
+		for(int i=0;i<K;i++){ //for each bigram factor
+			for(int j=i+1; j<K; j++, ij4+=4){
+				//right consistency
+				/*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
+				A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
+				A[row].push_back(make_pair(j, 1.0)); //b00+b10=1-u1
+				b[row++] = 1.0;
+				*/
+				A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
+				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
+				A[row].push_back(make_pair(j, -1.0)); //b01+b11=u1
+				b[row++] = 0.0;
+				//left consistency
+				/*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
+				A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
+				A[row].push_back(make_pair(i, 1.0)); //b00+b01=1-u1
+				b[row++] = 1.0;
+				*/
+				A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
+				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
+				A[row].push_back(make_pair(i, -1.0));//b10+b11=u1
+				b[row++] = 0.0;
+			}
+		}
+		
+		ij4=0;
+		for(int i=0;i<K;i++){
+			for(int j=i+1; j<K; j++, ij4+=4){
+				
+				for(int d=0;d<4;d++)
+					A[row].push_back(make_pair((K+ij4+d), 1.0)); //simplex
+				b[row++] = 1.0;
+			}
+		}
+		
+		assert( row == m+me );
+		
+		ConstrInv* At = new ConstrInv[n+nf];
+		transpose(A, m+me, n+nf, At);
+		ins_pred_prob->A = A;
+		ins_pred_prob->b = b;
+		ins_pred_prob->c = c;
+		ins_pred_prob->At = At;
+
+		ins_pred_prob->x = new double[n+nf];
+		ins_pred_prob->y = new double[m+me];
+        
+        return ins_pred_prob;
+    }
     ins_pred_prob->param->eta = param->rho;
 	int T = ins->T;
     
@@ -606,40 +702,60 @@ LP_Problem* construct_LP(Instance* ins, Param* param){
 double LPpredict(Instance* ins, Param* param){
 	//construct prediction problem for this instance
 	LP_Problem* ins_pred_prob = construct_LP(ins, param);
-	
+
 	ins_pred_prob->solve();
 
-	//Rounding
-	int T = ins->T;
-	double* x = ins_pred_prob->x;
 	double hit = 0.0;
-	int offset = 0;
-    cerr << endl;
-	for (int i = 0; i < T; i++){
-		int true_label = ins->labels[i];
-		int K = ins->node_label_lists[i]->size();
-		//offset+0 to offset+K-1 is a prob distribution
-		hit += x[offset+true_label];
-        for (int k = 0; k < K; k++){
-            if (fabs(x[offset+k])>1e-3){
-                cerr << k << ":" << x[offset+k] << " ";
-            }
-        }
+	int T = 0;
+    if (param->problem_type == "multilabel"){ 
+		//Rounding
+		double* x = ins_pred_prob->x;
+        int K = ins->node_label_lists[0]->size();
+		T = K;
+        cerr << "x:\t";
+        for(int i=0;i<K;i++){
+            cerr << x[i] << ":";
+			double true_yk = (find(ins->labels.begin(), ins->labels.end(), i) != ins->labels.end())?1.0:0.0;
+			cerr << true_yk << " ";
+            hit += 1 - fabs(true_yk - x[i]);
+		}
+        double score = 0.0;
+        for (int i = 0; i < ins_pred_prob->n + ins_pred_prob->nf; i++)
+            score += x[i]*ins_pred_prob->c[i];
+        cerr << ", score=" << score;
         cerr << endl;
-		offset += K;
-	}
-    for (int e = 0; e < ins->edges.size(); e++){
-        int i = ins->edges[e].first, j = ins->edges[e].second;
-		int K1 = ins->node_label_lists[i]->size();
-		int K2 = ins->node_label_lists[j]->size();
-        for (int k1 = 0; k1 < K1; k1++){
-            for (int k2 = 0; k2 < K2; k2++){
-                int k1k2 = k1*K2 + k2;
-                if (fabs(x[offset + k1k2]) > 1e-3)
-                    cerr << "(" << k1 << "," << k2 << "):" << x[offset + k1k2] << " ";
-            }
-        }
+    } else {
+        //Rounding
+        int T = ins->T;
+        double* x = ins_pred_prob->x;
+        int offset = 0;
         cerr << endl;
+        for (int i = 0; i < T; i++){
+            int true_label = ins->labels[i];
+            int K = ins->node_label_lists[i]->size();
+            //offset+0 to offset+K-1 is a prob distribution
+            hit += x[offset+true_label];
+            for (int k = 0; k < K; k++){
+                if (fabs(x[offset+k])>1e-3){
+                    cerr << k << ":" << x[offset+k] << " ";
+                }
+            }
+            cerr << endl;
+            offset += K;
+        }
+        for (int e = 0; e < ins->edges.size(); e++){
+            int i = ins->edges[e].first, j = ins->edges[e].second;
+            int K1 = ins->node_label_lists[i]->size();
+            int K2 = ins->node_label_lists[j]->size();
+            for (int k1 = 0; k1 < K1; k1++){
+                for (int k2 = 0; k2 < K2; k2++){
+                    int k1k2 = k1*K2 + k2;
+                    if (fabs(x[offset + k1k2]) > 1e-3)
+                        cerr << "(" << k1 << "," << k2 << "):" << x[offset + k1k2] << " ";
+                }
+            }
+            cerr << endl;
+        }
     }
 	
 	return hit/T;
@@ -650,7 +766,8 @@ double compute_acc_sparseLP(Problem* prob){
 	double N = 0.0;
 	double hit = 0.0;
 	for (int n = 0; n < data->size(); n++){
-		cerr << "@" << n << ": ";
+        if (n != 2) continue;
+        cerr << "@" << n << ": ";
 		Instance* ins = data->at(n);
 		N += ins->T;
 		double acc = LPpredict(ins, prob->param);

@@ -238,13 +238,13 @@ inline void solve_simplex(int n, Float* y, Float* b){
 	for (int i = 0; i < n; i++){
 		sum += b[i];
 	}
-    /*
+   /* 
 	cerr << "b: ";
 	for (int  i = 0; i < n; i++){
 		cerr << b[i] << " ";
 	}
 	cerr << endl;
-    */	
+    */
 	for (int i = n-1; i >= 0; i--){
 		double t = (sum - 1.0)/(i+1);
 		if (/*b[index[i]] >= 0 &&*/ b[index[i]] >= t){
@@ -255,7 +255,7 @@ inline void solve_simplex(int n, Float* y, Float* b){
 				if (y[index[j]] < 0.0)
 					y[index[j]] = 0;
 				if (y[index[j]] > 1 + 1e-6){
-                    cerr << b[index[0]] << endl;
+                    cerr << y[index[j]] << endl;
                     cerr << setprecision(10) << "t= " << t << ", sum=" << sum << ", b[index[i]]=" << b[index[i]] << ", i=" << i << endl;
                 }
                 assert(y[index[j]] <= 1 + 1e-6);
