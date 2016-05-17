@@ -49,6 +49,12 @@ yeast:
 	$(eval model := yeast.model)
 	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
 
+rcv1:
+	$(eval test_file := $(data_dir)/rcv1_regions_test.03k)
+	$(eval model := rcv1.model)
+	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
+
+
 #
 #speech:
 #	$(eval train_file := /scratch/cluster/ianyen/data/speech/speech.$(scale))

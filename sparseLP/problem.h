@@ -30,8 +30,8 @@ class Param{
 			testFname = NULL;
 			modelFname = NULL;
 			problem_type = "NULL";
-			infea_tol = 1e-3;
-            grad_tol = 1e-3;
+			infea_tol = 1e-4;
+            grad_tol = 1e-4;
             nnz_tol = 1e-6;
             MultiLabel = false;
 		}
@@ -155,7 +155,22 @@ class MultiLabelProblem : public Problem{
 			while( !fin.eof() ){
 				fin.getline(line, LINE_LEN);
 				string line_str(line);
-
+                
+                size_t found = line_str.find("  ");
+                while (found != string::npos){
+                    line_str = line_str.replace(found, 2, " ");
+                    found = line_str.find("  ");
+                }
+                found = line_str.find(", ");
+                while (found != string::npos){
+                    line_str = line_str.replace(found, 2, ",");
+                    found = line_str.find(", ");
+                }
+                found = line_str.find(" ,");
+                while (found != string::npos){
+                    line_str = line_str.replace(found, 2, ",");
+                    found = line_str.find(" ,");
+                }
 				if( line_str.length() < 2 && fin.eof() ){
 					continue;
 				}
@@ -208,24 +223,25 @@ class MultiLabelProblem : public Problem{
 			if( D < d )
 				D = d;
 
-			for(Int i=0;i<data.size();i++)
-				data[i]->T = data[i]->labels.size();
 
 			label_name_list.resize(label_index_map.size());
+			
 
 			for(map<string,Int>::iterator it=label_index_map.begin(); it!=label_index_map.end(); it++){
 				label_name_list[it->second] = it->first;
 			}
+            
+			K = label_index_map.size();
+            
+            for(Int i=0;i<data.size();i++){
+				data[i]->T = K; 
+            }
 
 			//propagate address of label name list to all nodes
 			for (vector<Instance*>::iterator it_data = data.begin(); it_data != data.end(); it_data++){
 				Instance* ins = *it_data;
-				for (int t = 0; t < ins->T; t++){
-					ins->node_label_lists.push_back(&(label_name_list));
-				}
+				ins->node_label_lists.push_back(&(label_name_list));
 			}
-
-			K = label_index_map.size();
 
 			delete[] line;
 		}
@@ -255,7 +271,7 @@ class MultiLabelProblem : public Problem{
 			line_str = string(line);
 			tokens = split(line_str, "=");
 			D = stoi(tokens[1]);
-			//skip fourth line
+            //skip fourth line
 			fin.getline(line, LINE_LEN);
 			//next D lines: read w
 			w = new Float*[D];

@@ -29,7 +29,7 @@ void parse_cmd_line(int argc, char** argv, Param* param){
     vector<string> args;
     for (i = 1; i < argc; i++){
         string arg(argv[i]);
-        cerr << "arg[i]:" << arg << "|" << endl;
+        //cerr << "arg[i]:" << arg << "|" << endl;
         args.push_back(arg);
     }
 	for(i=0;i<args.size();i++){
@@ -121,159 +121,162 @@ inline Float compute_acc(Instance* ins, vector<UniFactor*> nodes){
 	return (Float)hit/ins->T;
 }
 
+double struct_predict(MultiLabelProblem* prob, Param* param){
+    Float hit = 0.0;
+	Float N = 0.0;
+	int n = 0;
+	stats = new Stats();
+    int max_iter = param->max_iter;
+    Float score = 0.0;
+    for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
+        //if (n != 1) continue;
+        Instance* ins = *it_ins;
+        int K = ins->node_label_lists[0]->size();
+        MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
+        MultiBiFactor* edge = new MultiBiFactor(K, node, ins->edge_score_vecs[0], param);
+
+        /*
+           node->c[0] = 0.286; node->c[1] = 0.366; node->c[2] = -0.128; node->c[3] = 1.0;
+           edge->c[0] = 0; edge->c[1] = -2.1;  edge->c[2] = -0.0293;   edge->c[3] = 0;
+           edge->c[4] = 0; edge->c[5] = 0.0;   edge->c[6] = -0.0222;   edge->c[7] = 0;
+           edge->c[8] = 0; edge->c[9] = 0;     edge->c[10] = 0.0;       edge->c[11] = 0.0;
+           edge->c[12] = 0; edge->c[13] = 0;     edge->c[14] = 0.0;       edge->c[15] = 0.0;
+           */
+
+        /*for (int k1 = 0; k1 < K; k1++){
+          for (int k2 = 0; k2 < K; k2++){
+          edge->c[k1*K+k2] = edge->c[k1*14+k2];
+          }
+          }*/
+
+        /*
+           cerr << "c:\t";
+           for (int i = 0; i < K; i++){
+           cerr << node->c[i] << " ";
+           }
+           cerr << endl;
+           cerr << endl;
+           for (int i = 0; i < K; i++){
+           for (int j = 0; j < K; j++)
+           cerr << setprecision(3) << edge->c[i*K+j] << "\t";
+           cerr << endl;
+           }
+           cerr << endl;
+           */
+
+        Float p_inf = 0.0, acc = 0.0, d_inf = 0.0;
+        int iter = 0;
+        while (iter++ < max_iter){
+            //cerr << "========================================================" << endl;
+            
+            node->search();
+            node->subsolve();
+            /*while (node->dual_inf() > node->nnz_tol){
+              node->subsolve();
+              node->check_integrity();
+              node->display();
+            //edge->display();
+            }*/
+
+            stats->uni_act_size += node->act_set.size();
+            stats->num_uni++;
+            //node->subsolve();
+
+            //node->display();
+            //edge->display();
+            //node->check_integrity();
+            //edge->check_integrity();
+
+            edge->search();
+            edge->subsolve();
+            /*while (edge->dual_inf() > edge->nnz_tol){
+              edge->subsolve();
+              edge->check_integrity();
+            //edge->display();
+            }*/
+
+            stats->num_bi++;
+            stats->bi_act_size += edge->act_set.size();
+
+            node->update_multipliers();
+            edge->update_multipliers();
+
+            prediction_time += get_current_time();
+            node->check_integrity();
+            edge->check_integrity();
+
+            p_inf = edge->infea();
+            d_inf = edge->dual_inf() + node->dual_inf();
+            
+            prediction_time -= get_current_time();
+            if (debug){
+                //cerr << "d_inf=" << d_inf << ", p_inf=" << p_inf << endl;
+            }
+            if (iter >= 10 && d_inf <= param->grad_tol && p_inf <= param->infea_tol){
+                break;
+            }
+        }
+        score += node->score() +  edge->score();
+
+        //node->display();
+        //edge->display();
+        //compute hamming loss
+        Float T = ins->labels.size();
+        for (int k = 0; k < K; k++){
+            Float true_yk = (find(ins->labels.begin(), ins->labels.end(), k) != ins->labels.end())? 1.0:0.0;
+            Float distance = fabs(true_yk - node->y[k]);
+            hit += 1 - distance;
+        }
+        N += K;
+        acc = hit/N;
+        cerr << "hit=" << hit << ", N=" << N << endl; 
+        cerr << "@" << n << ": iter=" << iter << ", p_inf=" << p_inf << ", d_inf=" << d_inf << ", acc=" << acc;
+        cerr << ", pred={";
+        for (vector<pair<Float, int>>::iterator it = node->act_set.begin(); it != node->act_set.end(); it++){
+            cerr << "," << it->second << ":" << it->first;
+        }
+        cerr << "}";
+        cerr << ", score=" << score;
+
+        //compute score of true answer
+        Float true_score = 0;
+        cerr << ", true_labels={"; 
+        for (int i = 0; i < ins->labels.size(); i++){
+            int k = ins->labels[i];
+            cerr << "," << k;
+            true_score += node->c[k];
+        }
+        cerr << "}";
+        for (int i = 0; i < ins->labels.size(); i++){
+            int k1 = ins->labels[i];
+            for (int j = i+1; j < ins->labels.size(); j++){
+                int k2 = ins->labels[j];
+                true_score += edge->c[k1*K+k2];
+                true_score += edge->c[k2*K+k1];
+            }
+        }
+        cerr << ", true_score=" << true_score;
+        int nnz_c = 0;
+        for (int i = 0; i < K*K; i++){
+            if (edge->c[i] < 0)
+                nnz_c++;
+        }
+        cerr << ", nnz_c=" << nnz_c;
+        stats->display();
+        stats->display_time();
+        cerr << endl;
+    }
+    return hit/N; 
+}
+
 double struct_predict(Problem* prob, Param* param){
+	if (param->problem_type == "multilabel"){
+        return struct_predict((MultiLabelProblem*)prob, param);
+    }
 	Float hit = 0.0;
 	Float N = 0.0;
 	int n = 0;
 	stats = new Stats();
-    if (param->problem_type == "multilabel"){
-        //multilabel
-        /*int K = 100;
-        Instance* ins = prob->data[0];
-        MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
-        MultiBiFactor* edge = new MultiBiFactor(K, node, ins->edge_score_vecs[0], param);
-        cerr << param->max_iter << endl;
-        */
-        int max_iter = param->max_iter; 
-        for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
-            //if (n != 0) continue;
-            Instance* ins = *it_ins;
-            int K = ins->node_label_lists[0]->size();
-            MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
-            MultiBiFactor* edge = new MultiBiFactor(K, node, ins->edge_score_vecs[0], param);
-            
-            /*
-            node->c[0] = 0.286; node->c[1] = 0.366; node->c[2] = -0.128; node->c[3] = 1.0;
-            edge->c[0] = 0; edge->c[1] = -2.1;  edge->c[2] = -0.0293;   edge->c[3] = 0;
-            edge->c[4] = 0; edge->c[5] = 0.0;   edge->c[6] = -0.0222;   edge->c[7] = 0;
-            edge->c[8] = 0; edge->c[9] = 0;     edge->c[10] = 0.0;       edge->c[11] = 0.0;
-            edge->c[12] = 0; edge->c[13] = 0;     edge->c[14] = 0.0;       edge->c[15] = 0.0;
-            */
-
-            /*for (int k1 = 0; k1 < K; k1++){
-                for (int k2 = 0; k2 < K; k2++){
-                    edge->c[k1*K+k2] = edge->c[k1*14+k2];
-                }
-            }*/
-           
-            /*
-            cerr << "c:\t";
-            for (int i = 0; i < K; i++){
-                cerr << node->c[i] << " ";
-            }
-            cerr << endl;
-            cerr << endl;
-            for (int i = 0; i < K; i++){
-                for (int j = 0; j < K; j++)
-                    cerr << setprecision(3) << edge->c[i*K+j] << "\t";
-                cerr << endl;
-            }
-            cerr << endl;
-            */
-
-            Float score = 0.0, p_inf = 0.0, acc = 0.0, d_inf = 0.0;
-            int iter = 0;
-            while (iter++ < max_iter){
-                //cerr << "========================================================" << endl;
-                //if (iter <= 2)
-                node->search();
-                node->subsolve();
-                /*while (node->dual_inf() > node->nnz_tol){
-                    node->subsolve();
-                    node->check_integrity();
-                    node->display();
-                    //edge->display();
-                }*/
-            
-                stats->uni_act_size += node->act_set.size();
-                stats->num_uni++;
-                //node->subsolve();
-                
-                //node->display();
-                //edge->display();
-                //node->check_integrity();
-                //edge->check_integrity();
-
-                edge->search();
-                edge->subsolve();
-                /*while (edge->dual_inf() > edge->nnz_tol){
-                    edge->subsolve();
-                    edge->check_integrity();
-                    //edge->display();
-                }*/
-                
-                stats->num_bi++;
-                stats->bi_act_size += edge->act_set.size();
-                
-                //node->check_integrity();
-                //edge->check_integrity();
-                score = node->score() +  edge->score();
-                //node->display();
-                //edge->display();
-                node->update_multipliers();
-                edge->update_multipliers();
-                
-                node->check_integrity();
-                edge->check_integrity();
-                
-                p_inf = edge->infea();
-                d_inf = edge->dual_inf() + node->dual_inf();
-                //node->display();
-                //edge->display();
-
-                //edge->dual_inf();
-                //node->dual_inf();
-                if (debug){
-                    //cerr << "d_inf=" << d_inf << ", p_inf=" << p_inf << endl;
-                }
-                if (d_inf <= param->grad_tol && p_inf <= param->infea_tol){
-                    break;
-                }
-            }
-           
-            //node->display();
-            //edge->display();
-            //compute hamming loss
-            Float T = ins->labels.size();
-            for (int k = 0; k < K; k++){
-                Float true_yk = (find(ins->labels.begin(), ins->labels.end(), k) != ins->labels.end())? 1.0:0.0;
-                Float distance = fabs(true_yk - node->y[k]);
-                hit += 1 - distance;
-            }
-            N += K;
-            acc = hit/N;
-            cerr << "hit=" << hit << ", N=" << N << endl; 
-            cerr << "@" << n << ": iter=" << iter << ", score=" << score << ", p_inf=" << p_inf << ", d_inf=" << d_inf << ", acc=" << acc;
-            cerr << ", pred={";
-            for (vector<pair<Float, int>>::iterator it = node->act_set.begin(); it != node->act_set.end(); it++){
-                cerr << "," << it->second << ":" << it->first;
-            }
-            cerr << "}";
-            
-            //compute score of true answer
-            score = 0;
-            cerr << ", true_labels={"; 
-            for (int i = 0; i < ins->labels.size(); i++){
-                int k = ins->labels[i];
-                cerr << "," << k;
-                score += node->c[k];
-            }
-            cerr << "}";
-            for (int i = 0; i < ins->labels.size(); i++){
-                int k1 = ins->labels[i];
-                for (int j = i+1; j < ins->labels.size(); j++){
-                    int k2 = ins->labels[j];
-                    score += edge->c[k1*K+k2];
-                    score += edge->c[k2*K+k1];
-                }
-            }
-            cerr << ", true_score=" << score;
-            stats->display();
-            stats->display_time();
-            cerr << endl;
-        }
-        return hit/N;
-    }
 	vector<UniFactor*> nodes; 
 	vector<BiFactor*> edges;
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
@@ -305,18 +308,13 @@ double struct_predict(Problem* prob, Param* param){
 		nnz_msg = 0.0;
 		while (iter < max_iter){
 			score = 0.0;
-			//val = 0.0;
-            /*random_shuffle(node_indices, node_indices+nodes.size());
+            random_shuffle(node_indices, node_indices+nodes.size());
 			for (int n = 0; n < nodes.size(); n++){
 				UniFactor* node = nodes[node_indices[n]];
 
-				stats->uni_search_time -= get_current_time();
 				node->search();
-				stats->uni_search_time += get_current_time();
 
-				stats->uni_subsolve_time -= get_current_time();
 				node->subsolve();
-				stats->uni_subsolve_time += get_current_time();
 
 			}
 
@@ -324,17 +322,13 @@ double struct_predict(Problem* prob, Param* param){
 			for (int e = 0; e < edges.size(); e++){
 				BiFactor* edge = edges[edge_indices[e]];
                 
-				stats->bi_search_time -= get_current_time();
 				edge->search();
-				stats->bi_search_time += get_current_time();
 
-				stats->bi_subsolve_time -= get_current_time();
 				edge->subsolve();
-				stats->bi_subsolve_time += get_current_time();
 
-			}*/
+			}
 
-            int factor_count = 0;
+            /*int factor_count = 0;
             for (vector<Factor*>::iterator f = factor_seq.begin(); f != factor_seq.end(); f++, factor_count++){
                 //if (factor_count % 10000 == 0)    cerr << factor_count << "/" << factor_seq.size() << endl;
                 
@@ -343,7 +337,7 @@ double struct_predict(Problem* prob, Param* param){
                 //cerr << "subsolve" << endl;
                 (*f)->subsolve();
                 //cerr << "end" << endl;
-            }
+            }*/
 
 			for (vector<BiFactor*>::iterator it_edge = edges.begin(); it_edge != edges.end(); it_edge++){
 				BiFactor* edge = *it_edge;
@@ -353,6 +347,7 @@ double struct_predict(Problem* prob, Param* param){
             //compute primal inf & dual inf
             
             //cerr << "==========================" << endl;
+            
             d_inf = 0.0; int dinf_index = -1; int dinf_factor_index = -1;
             int node_count = 0;
 			for (vector<UniFactor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){
@@ -661,8 +656,6 @@ int main(int argc, char** argv){
 		cerr << "Acc=" << compute_acc_sparseLP(prob) << endl;
 	}
 	if (param->solver == 2){
-		//cerr << "Acc=" << compute_acc_sparseLP(prob) << endl;
-        //cerr << "========================================" << endl;
         cerr << "Acc=" << struct_predict(prob, param) << endl;
     }
 	prediction_time += get_current_time();

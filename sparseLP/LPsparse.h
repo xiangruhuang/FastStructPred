@@ -38,13 +38,13 @@ class LP_Param{
 		solve_from_dual = false;
 		use_CG = false;
 		
-		tol = 1e-4;
+		tol = 1e-2;
 		//tol_trans = 10*tol;
 		tol_trans = -1;
 		tol_sub = 0.5*tol_trans;
 		
-		eta = 1.0;
-		nnz_tol = 1e-5;
+		eta = 1;
+		nnz_tol = 1e-4;
 		max_iter = 1000;
 	}
 };
@@ -90,47 +90,6 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		PGmax_new = -1e300;
 		random_shuffle(index, index+active_size);
 
-		//search
-		/*for (int s = 0; s < active_size; s++){
-			inside[index[s]] = true;
-		}
-		double gmax = 0.0;
-		int max_index = -1;
-		for (int j = 0; j < n + nf; j++){
-			if (inside[j]) continue;
-			//compute gradient of j-th coordinate
-			double g = 0.0;
-			for(ConstrInv::iterator it=At[j].begin(); it!=At[j].end(); it++){
-				if( it->first < m && w[it->first] > 0.0 ){
-					g += w[it->first] * it->second;
-				}
-				else if( it->first >= m ){
-					g += w[it->first] * it->second;
-				}
-			}
-			g *= eta_t;
-			g += c[j];
-			if( j>=n || x[j] > 0.0 ){
-				g = fabs(g);
-			}else{
-				if( g < 0.0 ){
-					g = fabs(g);
-				} else {
-					g = 0.0;
-				}
-			}
-			if (g > gmax){
-				max_index = j;
-				gmax = fabs(g);
-			}
-		}
-		if (max_index != -1){
-			// cerr << "adding active coordinate" << endl;
-			index[active_size++] = max_index;
-			inside[max_index] = true;
-		}*/
-
-		//update
 		for(int s=0;s<active_size;s++){
 			
 			int j = index[s];
@@ -166,7 +125,6 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 					active_size--;
 					swap( index[s], index[active_size] );
 					s--;
-//					inside[j] = false;
 					continue;
 				}else if( g < 0.0 ){
 					PG = fabs(g);
@@ -331,7 +289,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 	int inner_max_iter=1;
 	double PGmax_old = 1e300;
 	int niter;
-	int print_per_iter = 2;
+	int print_per_iter = 1;
 	double pinf = 1e300, gap=1e300, dinf=1300, obj; //primal infeasibility
 	int nnz;//, nnz_last=1;
 	int active_nnz = nnz_A;
@@ -367,13 +325,13 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			gap = duality_gap(n,nf,m,me,x,w,c,b,eta_t);
 
 			
-			//cerr << setprecision(7) << "iter=" << t << ", #inner=" << niter << ", obj=" << obj ;
-			//cerr << setprecision(2)  << ", p_inf=" << pinf << ", d_inf=" << dinf << ", gap=" << fabs(gap/obj) << ", nnz=" << nnz << "(" << ((double)active_nnz/nnz_A) << ")" ;
+			//cerr << setprecision(7) << "iter=" << t << ", #inner=" << niter << ", obj=" << obj << ", eta=" << eta_t;
+			//cerr << setprecision(2) << ", p_inf=" << pinf << ", d_inf=" << dinf << ", gap=" << fabs(gap/obj) << ", nnz=" << nnz << "(" << ((double)active_nnz/nnz_A) << ")" ;
 			//cerr << endl;
 		}
 		
-		if( pinf<=param->tol && dinf<=param->tol ){
-			cerr << "iter=" << t << ", nnz=" << nnz << ", pinf=" << pinf << ", dinf=" << dinf;
+		if( obj <= 0 && pinf<=param->tol && dinf<=param->tol ){
+			//cerr << "iter=" << t << ", nnz=" << nnz << ", pinf=" << pinf << ", dinf=" << dinf;
 			break;
 		}
 		
@@ -400,7 +358,7 @@ void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, 
 			phase = 2;
 			print_per_iter = 1;
 			//cerr << "phase = 2" << endl;
-			inner_max_iter = 1000;
+			inner_max_iter = 100;
 		}
 		
 		if( phase == 2 ){
@@ -468,6 +426,12 @@ class LP_Problem{
         param = new LP_Param();
     }
 
+    LP_Problem(Param* _param){
+        param = new LP_Param();
+        //param->eta = _param->rho;
+        //param->nnz_tol = _param->nnz_tol;
+    }
+
 	void solve(){
 		LPsolve(n, nf, m, me, A, At, b, c, x, y, param);
 	}
@@ -486,104 +450,110 @@ class LP_Problem{
 	}
 };
 
-LP_Problem* construct_LP(Instance* ins, Param* param){
-	LP_Problem* ins_pred_prob = new LP_Problem();
-    if (param->problem_type == "multilabel"){
-		int K = ins->node_label_lists[0]->size();
-        int M = K*(K-1)/2; //number of bigram factor
-		int m = 0, nf=0, n=K+M*4, me=2*M + M; //consistency + simplex
-		
-		ins_pred_prob->m = m;
-		ins_pred_prob->nf = nf;
-		ins_pred_prob->n = n;
-		ins_pred_prob->me = me;
-		
-		Constr* A = new Constr[m+me];
-		double* b = new double[m+me];
-		double* c = new double[n+nf];
-		
-        //unigram 
-        //cerr << "c:\t";
-        for(Int i=0;i<K;i++){
-            c[i] = ins->node_score_vecs[0][i];
-          //  cerr << c[i] << " ";
-        }
-        //cerr << endl;
-        
-        /*if( y != NULL ){ //loss-augmented decoding
-            for(Int k=0; k<K; k++){
-                if( find( y->begin(), y->end(), k ) == y->end() )
-                    c[k] -= 1.0;
-                else
-                    c[k] -= -1.0;
-            }
-        }*/
+LP_Problem* construct_LP_multi(Instance* ins, Param* param){
+	LP_Problem* ins_pred_prob = new LP_Problem(param);
+    int K = ins->node_label_lists[0]->size();
+    int M = K*(K-1)/2; //number of bigram factor
+    int m = 0, nf=0, n=K+M*4, me=2*M + M; //consistency + simplex
 
-        //cerr << "|||| ";
-        //bigram
-        for(Int i=K;i<K+M*4;i++)
-            c[i] = 0.0;
-		int ij4=0;
-        for(Int i=0;i<K; i++){
-            for(Int j=i+1; j<K; j++, ij4+=4){
-                c[ K + ij4 + 3 ] = ins->edge_score_vecs[0]->c[i*K+j];
-                //cerr << c[K+ij4+3] << " ";
-            }
-        }
-        //cerr << endl;
-       
-		int row=0;
-        ij4 = 0;
-        //construct consistency constraint
-		for(int i=0;i<K;i++){ //for each bigram factor
-			for(int j=i+1; j<K; j++, ij4+=4){
-				//right consistency
-				/*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
-				A[row].push_back(make_pair(j, 1.0)); //b00+b10=1-u1
-				b[row++] = 1.0;
-				*/
-				A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
-				A[row].push_back(make_pair(j, -1.0)); //b01+b11=u1
-				b[row++] = 0.0;
-				//left consistency
-				/*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
-				A[row].push_back(make_pair(i, 1.0)); //b00+b01=1-u1
-				b[row++] = 1.0;
-				*/
-				A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
-				A[row].push_back(make_pair(i, -1.0));//b10+b11=u1
-				b[row++] = 0.0;
-			}
-		}
-		
-		ij4=0;
-		for(int i=0;i<K;i++){
-			for(int j=i+1; j<K; j++, ij4+=4){
-				
-				for(int d=0;d<4;d++)
-					A[row].push_back(make_pair((K+ij4+d), 1.0)); //simplex
-				b[row++] = 1.0;
-			}
-		}
-		
-		assert( row == m+me );
-		
-		ConstrInv* At = new ConstrInv[n+nf];
-		transpose(A, m+me, n+nf, At);
-		ins_pred_prob->A = A;
-		ins_pred_prob->b = b;
-		ins_pred_prob->c = c;
-		ins_pred_prob->At = At;
+    ins_pred_prob->m = m;
+    ins_pred_prob->nf = nf;
+    ins_pred_prob->n = n;
+    ins_pred_prob->me = me;
 
-		ins_pred_prob->x = new double[n+nf];
-		ins_pred_prob->y = new double[m+me];
-        
-        return ins_pred_prob;
+    Constr* A = new Constr[m+me];
+    double* b = new double[m+me];
+    double* c = new double[n+nf];
+
+    //unigram 
+    //cerr << "c:\t";
+    for(Int i=0;i<K;i++){
+        c[i] = ins->node_score_vecs[0][i];
+        //  cerr << c[i] << " ";
     }
+    //cerr << endl;
+
+    /*if( y != NULL ){ //loss-augmented decoding
+      for(Int k=0; k<K; k++){
+      if( find( y->begin(), y->end(), k ) == y->end() )
+      c[k] -= 1.0;
+      else
+      c[k] -= -1.0;
+      }
+      }*/
+
+    //cerr << "|||| ";
+    //bigram
+    for(Int i=K;i<K+M*4;i++)
+        c[i] = 0.0;
+    int ij4=0;
+    for(Int i=0;i<K; i++){
+        for(Int j=i+1; j<K; j++, ij4+=4){
+            c[ K + ij4 + 3 ] = ins->edge_score_vecs[0]->c[i*K+j];
+            //cerr << c[K+ij4+3] << " ";
+        }
+    }
+    //cerr << endl;
+
+    int row=0;
+    ij4 = 0;
+    //construct consistency constraint
+    for(int i=0;i<K;i++){ //for each bigram factor
+        for(int j=i+1; j<K; j++, ij4+=4){
+            //right consistency
+            /*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
+              A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
+              A[row].push_back(make_pair(j, 1.0)); //b00+b10=1-u1
+              b[row++] = 1.0;
+              */
+            A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
+            A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
+            A[row].push_back(make_pair(j, -1.0)); //b01+b11=u1
+            b[row++] = 0.0;
+            //left consistency
+            /*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
+              A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
+              A[row].push_back(make_pair(i, 1.0)); //b00+b01=1-u1
+              b[row++] = 1.0;
+              */
+            A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
+            A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
+            A[row].push_back(make_pair(i, -1.0));//b10+b11=u1
+            b[row++] = 0.0;
+        }
+    }
+
+    ij4=0;
+    for(int i=0;i<K;i++){
+        for(int j=i+1; j<K; j++, ij4+=4){
+
+            for(int d=0;d<4;d++)
+                A[row].push_back(make_pair((K+ij4+d), 1.0)); //simplex
+            b[row++] = 1.0;
+        }
+    }
+
+    assert( row == m+me );
+
+    ConstrInv* At = new ConstrInv[n+nf];
+    transpose(A, m+me, n+nf, At);
+    ins_pred_prob->A = A;
+    ins_pred_prob->b = b;
+    ins_pred_prob->c = c;
+    ins_pred_prob->At = At;
+
+    ins_pred_prob->x = new double[n+nf];
+    ins_pred_prob->y = new double[m+me];
+
+    return ins_pred_prob;
+
+}
+
+LP_Problem* construct_LP(Instance* ins, Param* param){
+    if (param->problem_type == "multilabel"){
+        return construct_LP_multi(ins, param);
+    }
+	LP_Problem* ins_pred_prob = new LP_Problem(param);
     ins_pred_prob->param->eta = param->rho;
 	int T = ins->T;
     
@@ -699,6 +669,7 @@ LP_Problem* construct_LP(Instance* ins, Param* param){
 	return ins_pred_prob;
 }
 
+static double score = 0.0;
 double LPpredict(Instance* ins, Param* param){
 	//construct prediction problem for this instance
 	LP_Problem* ins_pred_prob = construct_LP(ins, param);
@@ -719,28 +690,28 @@ double LPpredict(Instance* ins, Param* param){
 			cerr << true_yk << " ";
             hit += 1 - fabs(true_yk - x[i]);
 		}
-        double score = 0.0;
         for (int i = 0; i < ins_pred_prob->n + ins_pred_prob->nf; i++)
             score += x[i]*ins_pred_prob->c[i];
         cerr << ", score=" << score;
         cerr << endl;
     } else {
         //Rounding
-        int T = ins->T;
+        T = ins->T;
         double* x = ins_pred_prob->x;
         int offset = 0;
-        cerr << endl;
+        //cerr << endl;
         for (int i = 0; i < T; i++){
             int true_label = ins->labels[i];
             int K = ins->node_label_lists[i]->size();
             //offset+0 to offset+K-1 is a prob distribution
             hit += x[offset+true_label];
+            //cerr << "true_label=" << true_label << " ";
             for (int k = 0; k < K; k++){
                 if (fabs(x[offset+k])>1e-3){
-                    cerr << k << ":" << x[offset+k] << " ";
+                    //cerr << k << ":" << x[offset+k] << " ";
                 }
             }
-            cerr << endl;
+            //cerr << endl;
             offset += K;
         }
         for (int e = 0; e < ins->edges.size(); e++){
@@ -750,14 +721,15 @@ double LPpredict(Instance* ins, Param* param){
             for (int k1 = 0; k1 < K1; k1++){
                 for (int k2 = 0; k2 < K2; k2++){
                     int k1k2 = k1*K2 + k2;
-                    if (fabs(x[offset + k1k2]) > 1e-3)
-                        cerr << "(" << k1 << "," << k2 << "):" << x[offset + k1k2] << " ";
+                    if (fabs(x[offset + k1k2]) > 1e-3){
+                        //cerr << "(" << k1 << "," << k2 << "):" << x[offset + k1k2] << " ";
+                    }
                 }
             }
-            cerr << endl;
+            //cerr << endl;
         }
     }
-	
+
 	return hit/T;
 }
 
@@ -766,12 +738,12 @@ double compute_acc_sparseLP(Problem* prob){
 	double N = 0.0;
 	double hit = 0.0;
 	for (int n = 0; n < data->size(); n++){
-        if (n != 2) continue;
+        //if (n >= 10) continue;
         cerr << "@" << n << ": ";
 		Instance* ins = data->at(n);
 		N += ins->T;
 		double acc = LPpredict(ins, prob->param);
-		double temp_hit = hit;
+        double temp_hit = hit;
 		hit += acc*ins->T;
 
 		cerr << ", acc=" << ((hit-temp_hit)/ins->T) << endl;
