@@ -18,9 +18,9 @@ class Param{
 		Float eta, rho;
 		string problem_type; // problem type
 		Float infea_tol; // tolerance of infeasibility
-        Float grad_tol; // stopping condition for gradient
-        Float nnz_tol; // threshold to shrink to zero
-        bool MultiLabel;
+		Float grad_tol; // stopping condition for gradient
+		Float nnz_tol; // threshold to shrink to zero
+		bool MultiLabel;
 
 		Param(){
 			solver = 0;
@@ -31,9 +31,9 @@ class Param{
 			modelFname = NULL;
 			problem_type = "NULL";
 			infea_tol = 1e-4;
-            grad_tol = 1e-4;
-            nnz_tol = 1e-6;
-            MultiLabel = false;
+			grad_tol = 1e-4;
+			nnz_tol = 1e-8;
+			MultiLabel = false;
 		}
 };
 
@@ -43,12 +43,21 @@ class ScoreVec{
 		pair<Float, int>* sorted_c; // sorted <score, index> vector; 
 		pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
 		pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
-        int K1, K2;
-        ScoreVec(Float* _c, int _K1, int _K2){
+		int K1, K2;
+		ScoreVec(Float* _c, int _K1, int _K2){
 			//sort c as well as each row and column in increasing order
-            c = _c;
-            K1 = _K1;
-            K2 = _K2;
+			c = _c;
+			K1 = _K1;
+			K2 = _K2;
+			internal_sort();
+		}
+		ScoreVec(int _K1, int _K2, Float* _c){
+			c = _c;
+			K1 = _K1;
+			K2 = _K2;
+		}
+
+		void internal_sort(){
 			sorted_row = new pair<Float, int>*[K1];
 			for (int k1 = 0; k1 < K1; k1++){
 				sorted_row[k1] = new pair<Float, int>[K2];
@@ -75,21 +84,20 @@ class ScoreVec{
 				sort(sorted_col[k2], sorted_col[k2]+K1, less<pair<Float, int>>());
 			}
 			sort(sorted_c, sorted_c+K1*K2, less<pair<Float, int>>());
-            
-        }
+		}
 
-        ~ScoreVec(){
-            delete[] c;
-            delete[] sorted_c;
-            for (int i = 0; i < K1; i++){
-                delete[] sorted_row[i];
-            }
-            delete[] sorted_row;
-            for (int i = 0; i < K2; i++){
-                delete[] sorted_col[i];
-            }
-            delete[] sorted_col;
-        }
+		~ScoreVec(){
+			delete[] c;
+			delete[] sorted_c;
+			for (int i = 0; i < K1; i++){
+				delete[] sorted_row[i];
+			}
+			delete[] sorted_row;
+			for (int i = 0; i < K2; i++){
+				delete[] sorted_col[i];
+			}
+			delete[] sorted_col;
+		}
 };
 
 //each Instance is an isolated subgraph
@@ -128,25 +136,163 @@ class Problem{
 			assert(false);
 		}
 };
+		
+inline void readLine(ifstream& fin, char* line){
+	fin.getline(line, LINE_LEN);
+	while (!fin.eof() && strlen(line) == 0){
+		fin.getline(line, LINE_LEN);
+	}
+}
+
+class UAIProblem : public Problem{
+	public:
+		UAIProblem(Param* _param) : Problem(_param){}
+		~UAIProblem(){
+			
+		}
+		
+		void construct_data(){
+			char* fname = param->testFname;
+			char* line = new char[LINE_LEN];
+			cerr << "reading uai file " << fname << endl;
+			ifstream fin(fname);
+			//skip first line
+			readLine(fin, line);
+			//only one instance
+			Instance* ins = new Instance();
+			readLine(fin, line);
+			ins->T = atoi(line);
+			int T = ins->T;
+			//cerr << "T=" << T << endl;
+			readLine(fin, line);
+			string line_str(line);
+			vector<string> tokens = split(line_str, " ");
+			assert(tokens.size() == T);
+			for (int i = 0; i < T; i++){
+				vector<string>* list_i = new vector<string>();
+				list_i->clear();
+				int K = stoi(tokens[i]);
+				for (int k = 0; k < K; k++){
+					list_i->push_back(to_string(k));
+				}
+				ins->node_label_lists.push_back(list_i);
+				Float* c_i = new Float[K];
+				memset(c_i, 0.0, sizeof(Float)*K);
+				ins->node_score_vecs.push_back(c_i);
+				ins->labels.push_back(0);
+			}
+			
+			// number of factors
+			readLine(fin, line);
+			int F = atoi(line);
+			//cerr << "F=" << F << endl;
+			vector<string> tables;
+			map<pair<int, int>, Float*> table_map;
+			for (int f = 0; f < F; f++){
+				readLine(fin, line);
+				string line_str(line);
+				tables.push_back(line_str);
+				tokens = split(line_str, " ");
+				int d = stoi(tokens[0]);
+				if (d == 1){
+					//this is a node
+					//nothing to do
+				} else {
+					assert(d == 2);
+					//this is an edge
+					int l = stoi(tokens[1]), r = stoi(tokens[2]);
+					//cerr << "l=" << l << ", r=" << r << endl;
+					pair<int, int> e = make_pair(l, r); //l*T + r;
+					int K1 = ins->node_label_lists[l]->size();
+					int K2 = ins->node_label_lists[r]->size();
+					//cerr << "K1=" << K1 << ", K2=" << K2 << endl;
+					if (table_map.find(e) == table_map.end()){
+						ins->edges.push_back(e);
+						Float* c_e = new Float[K1*K2];
+						memset(c_e, 0.0, sizeof(Float)*K1*K2);
+						table_map.insert(make_pair(e, c_e));
+						ScoreVec* sv = new ScoreVec(K1, K2, c_e);
+						ins->edge_score_vecs.push_back(sv);
+					}
+				}
+			}
+
+			//cerr << "done with preamble" << endl;
+
+			// read tables
+			for (int f = 0; f < F; f++){
+				//cerr << f << "/" << F << endl;
+				tokens = split(tables[f], " ");
+				int d = stoi(tokens[0]);
+				if (d == 1){
+					//this is a node
+					int i = stoi(tokens[1]);
+					Float* c_i = ins->node_score_vecs[i];
+					readLine(fin, line);
+					int K = atoi(line);
+					assert(K == ins->node_label_lists[i]->size());
+					readLine(fin, line);
+					string line_str(line);
+					tokens = split(line_str, " ");
+					assert(tokens.size() == K);
+					for (int k = 0; k < K; k++){
+						Float val = stof(tokens[k]);
+						c_i[k] += -log(val);
+					}
+				} else {
+					assert(d == 2);
+					//this is an edge
+					int l = stoi(tokens[1]), r = stoi(tokens[2]);
+					pair<int, int> e = make_pair(l, r);
+					//ins->edges.push_back(e);
+					int K1 = ins->node_label_lists[l]->size(), K2 = ins->node_label_lists[r]->size();
+					map<pair<int, int>, Float*>::iterator it = table_map.find(e);
+					assert(it != table_map.end());
+					Float* c_e = it->second;
+					table_map.insert(make_pair(e, c_e));
+					int KK;
+					fin >> KK;
+					assert(KK = K1 * K2);
+					for (int k1 = 0; k1 < K1; k1++){
+						for (int k2 = 0; k2 < K2; k2++){
+							Float val;
+							fin >> val;
+							c_e[k1*K2+k2] += -log(val);
+						}
+					}
+				}
+			}
+			//cerr << "done reading uai file" << endl;			
+
+			//sort each ScoreVec after all values read
+			for (int i = 0; i < ins->edges.size(); i++){
+				ScoreVec* sv = ins->edge_score_vecs[i];
+				sv->internal_sort();
+			}
+			//cerr << "done sorting" << endl;			
+
+			data.push_back(ins);
+		}
+};
 
 class MultiLabelProblem : public Problem{
-    public:
+	public:
 		map<string, int> label_index_map;
 		vector<string> label_name_list;
 		map<string, int> node_index_map;
 		int K, D, N;
-        ScoreVec* sv;
-        Float** w;
-        MultiLabelProblem(Param* _param) : Problem(_param){}
-        ~MultiLabelProblem(){
-            label_index_map.clear();
-            label_name_list.clear();
-            node_index_map.clear();
-            for (int j = 0; j < D; j++)
-                delete[] w[j];
-            delete[] w;
-        }
-        void readTestData(char* fname){
+		ScoreVec* sv;
+		Float** w;
+		MultiLabelProblem(Param* _param) : Problem(_param){}
+		~MultiLabelProblem(){
+			label_index_map.clear();
+			label_name_list.clear();
+			node_index_map.clear();
+			for (int j = 0; j < D; j++)
+				delete[] w[j];
+			delete[] w;
+		}
+		void readTestData(char* fname){
 			ifstream fin(fname);
 			char* line = new char[LINE_LEN];
 
@@ -155,41 +301,41 @@ class MultiLabelProblem : public Problem{
 			while( !fin.eof() ){
 				fin.getline(line, LINE_LEN);
 				string line_str(line);
-                
-                size_t found = line_str.find("  ");
-                while (found != string::npos){
-                    line_str = line_str.replace(found, 2, " ");
-                    found = line_str.find("  ");
-                }
-                found = line_str.find(", ");
-                while (found != string::npos){
-                    line_str = line_str.replace(found, 2, ",");
-                    found = line_str.find(", ");
-                }
-                found = line_str.find(" ,");
-                while (found != string::npos){
-                    line_str = line_str.replace(found, 2, ",");
-                    found = line_str.find(" ,");
-                }
+
+				size_t found = line_str.find("  ");
+				while (found != string::npos){
+					line_str = line_str.replace(found, 2, " ");
+					found = line_str.find("  ");
+				}
+				found = line_str.find(", ");
+				while (found != string::npos){
+					line_str = line_str.replace(found, 2, ",");
+					found = line_str.find(", ");
+				}
+				found = line_str.find(" ,");
+				while (found != string::npos){
+					line_str = line_str.replace(found, 2, ",");
+					found = line_str.find(" ,");
+				}
 				if( line_str.length() < 2 && fin.eof() ){
 					continue;
 				}
-                
-                Instance* ins = new Instance();
+
+				Instance* ins = new Instance();
 				vector<string> tokens = split(line_str, " ");
 				//get label index
 				Int lab_ind;
 				map<string,Int>::iterator it;
-                vector<string> labels = split(tokens[0], ",");
-                for (int i = 0; i < labels.size(); i++){
-                    string label = labels[i];
-                    if(  (it=label_index_map.find(label)) == label_index_map.end() ){
-                        lab_ind = label_index_map.size();
-                        label_index_map.insert(make_pair(label,lab_ind));
-                    }else
-                        lab_ind = it->second;
-                    ins->labels.push_back(lab_ind);
-                }
+				vector<string> labels = split(tokens[0], ",");
+				for (int i = 0; i < labels.size(); i++){
+					string label = labels[i];
+					if(  (it=label_index_map.find(label)) == label_index_map.end() ){
+						lab_ind = label_index_map.size();
+						label_index_map.insert(make_pair(label,lab_ind));
+					}else
+						lab_ind = it->second;
+					ins->labels.push_back(lab_ind);
+				}
 
 				SparseVec* x = new SparseVec();
 				for(Int i=1;i<tokens.size();i++){
@@ -215,7 +361,9 @@ class MultiLabelProblem : public Problem{
 				ins->node_score_vecs.push_back(c);
 				int len = ins->labels.size();
 				ins->edge_score_vecs.push_back(sv);
-                data.push_back(ins);
+				//write ins to uai format
+				
+				data.push_back(ins);
 			}
 			fin.close();
 
@@ -223,25 +371,62 @@ class MultiLabelProblem : public Problem{
 			if( D < d )
 				D = d;
 
-
 			label_name_list.resize(label_index_map.size());
-			
+
 
 			for(map<string,Int>::iterator it=label_index_map.begin(); it!=label_index_map.end(); it++){
 				label_name_list[it->second] = it->first;
 			}
-            
+
 			K = label_index_map.size();
-            
-            for(Int i=0;i<data.size();i++){
+
+			for(Int i=0;i<data.size();i++){
 				data[i]->T = K; 
-            }
+			}
 
 			//propagate address of label name list to all nodes
 			for (vector<Instance*>::iterator it_data = data.begin(); it_data != data.end(); it_data++){
 				Instance* ins = *it_data;
 				ins->node_label_lists.push_back(&(label_name_list));
 			}
+			
+			/*ofstream fout("../../data/multilabel/rcv1_regions.uai");
+			Instance* ins = data[0];
+			fout << "MARKOV" << endl;
+			int T = ins->T;
+			fout << T << endl;
+			for (int t = 0; t < T; t++){
+				if (t != 0)
+					fout << " ";
+				fout << 2;
+			}
+			fout << endl;
+			fout << (T + K*(K-1)/2) << endl;
+			for (int t = 0; t < T; t++){
+				fout << "1 " << t << endl;
+			}
+			for (int k1 = 0; k1 < K; k1++){
+				for (int k2 = k1+1; k2 < K; k2++){
+					fout << "2 " << k1 << " " << k2 << endl; 
+				}
+			}
+			for (int i = 0; i < T; i++){
+				fout << 2 << endl;
+				Float c_i = ins->node_score_vecs[0][i];
+				fout << setprecision(10) << 1.0 << " " << exp(-c_i) << endl;
+				fout << endl;
+			}
+			for (int k1 = 0; k1 < K; k1++){
+				for (int k2 = k1+1; k2 < K; k2++){
+					fout << 4 << endl;
+					Float c_e = ins->edge_score_vecs[0]->c[k1*K+k2];
+					fout << 1.0 << " " << 1.0 << endl;
+					fout << setprecision(10) << 1.0 << " " << exp(-c_e) << endl;
+					fout << endl;
+				}
+			}
+			
+			fout.close();*/
 
 			delete[] line;
 		}
@@ -271,7 +456,7 @@ class MultiLabelProblem : public Problem{
 			line_str = string(line);
 			tokens = split(line_str, "=");
 			D = stoi(tokens[1]);
-            //skip fourth line
+			//skip fourth line
 			fin.getline(line, LINE_LEN);
 			//next D lines: read w
 			w = new Float*[D];
@@ -325,10 +510,10 @@ class MultiLabelProblem : public Problem{
 			}
 		}
 
-        void construct_data(){
-            readModel(param->modelFname);
-            readTestData(param->testFname);
-        }
+		void construct_data(){
+			readModel(param->modelFname);
+			readTestData(param->testFname);
+		}
 };
 
 class CompleteGraphProblem : public Problem{
@@ -337,15 +522,15 @@ class CompleteGraphProblem : public Problem{
 		vector<string> label_name_list;
 		map<string, int> node_index_map;
 		int K;
-        ScoreVec* sv;
+		ScoreVec* sv;
 		CompleteGraphProblem(Param* _param) : Problem(_param) {}
-        ~CompleteGraphProblem(){
-            label_index_map.clear();
-            label_name_list.clear();
-            node_index_map.clear();
-        }
-        void construct_data(){
-            cerr << "constructing from " << param->testFname << " ";
+		~CompleteGraphProblem(){
+			label_index_map.clear();
+			label_name_list.clear();
+			node_index_map.clear();
+		}
+		void construct_data(){
+			cerr << "constructing from " << param->testFname << " ";
 			node_index_map.clear();
 			label_index_map.clear();
 			label_name_list.clear();
@@ -353,16 +538,16 @@ class CompleteGraphProblem : public Problem{
 			char* line = new char[LINE_LEN];
 
 			Instance* ins = new Instance();// only one instance in this task
-			fin.getline(line, LINE_LEN);
+			readLine(fin, line);
 			string line_str(line);
 			vector<string> tokens = split(line_str, " ");
 			K = stoi(tokens[1]);
 			ins->T = stoi(tokens[0]);
 			for (int i = 0; i < ins->T; i++){
-				fin.getline(line, LINE_LEN);
+				readLine(fin, line);
 				string line_str(line);
 				tokens = split(line_str, " ");
-                node_index_map.insert(make_pair(tokens[0], i));
+				node_index_map.insert(make_pair(tokens[0], i));
 				Float* c = new Float[K];
 				memset(c, 0.0, sizeof(Float)*K);
 				for (vector<string>::iterator t = tokens.begin() + 1; t != tokens.end(); t++){
@@ -378,47 +563,49 @@ class CompleteGraphProblem : public Problem{
 					c[index] = (Float)(-stod(label_val[1]));
 				}
 				ins->node_score_vecs.push_back(c);
-                ins->labels.push_back(0); // prediction is disabled for this task
+				ins->labels.push_back(0); // prediction is disabled for this task
 			}
-            //cerr << "#node=" << ins->T << endl;
+			//cerr << "#node=" << ins->T << endl;
 
-            Float* c = new Float[K*K];
-            memset(c, 0.0, sizeof(Float)*K*K);
+			//skip this line
+			readLine(fin, line);
+			Float* c = new Float[K*K];
+			memset(c, 0.0, sizeof(Float)*K*K);
 			for (int i = 0; i < K; i++){
-			    fin.getline(line, LINE_LEN);
-                string line_str(line);
-                vector<string> tokens = split(line_str, " ");
-                map<string, int>::iterator it = label_index_map.find(tokens[0]);
-                assert(it != label_index_map.end());
-                int k1 = it->second;
-                assert(k1 >= 0 && k1 < K);
-                for (int j = 1; j < tokens.size(); j++){
-                    vector<string> label_val = split(tokens[j], ":");
-                    Float val = (Float)stod(label_val[1]);
-                    map<string, int>::iterator it = label_index_map.find(label_val[0]);
-                    assert(it != label_index_map.end());
-                    int k2 = it->second;
-                    assert(k2 >= 0 && k2 < K);
-                    c[k1*K+k2] = -val;
-                }
+				readLine(fin, line);
+				string line_str(line);
+				vector<string> tokens = split(line_str, " ");
+				map<string, int>::iterator it = label_index_map.find(tokens[0]);
+				assert(it != label_index_map.end());
+				int k1 = it->second;
+				assert(k1 >= 0 && k1 < K);
+				for (int j = 1; j < tokens.size(); j++){
+					vector<string> label_val = split(tokens[j], ":");
+					Float val = (Float)stod(label_val[1]);
+					map<string, int>::iterator it = label_index_map.find(label_val[0]);
+					assert(it != label_index_map.end());
+					int k2 = it->second;
+					assert(k2 >= 0 && k2 < K);
+					c[k1*K+k2] = -val;
+				}
 			}
 
-            sv = new ScoreVec(c, K, K);
-            while (!fin.eof()){
-                fin.getline(line, LINE_LEN);
-                if (strlen(line) == 0)
-                    continue;
-                string line_str(line);
-                vector<string> tokens = split(line_str, " ");
-                map<string, int>::iterator i = node_index_map.find(tokens[0]), j = node_index_map.find(tokens[1]);
-                assert(i != node_index_map.end() && j != node_index_map.end());
-                ins->edges.push_back(make_pair(i->second,j->second));
-                ins->edge_score_vecs.push_back(sv);
-            }
+			sv = new ScoreVec(c, K, K);
+			while (!fin.eof()){
+				readLine(fin, line);
+				if (fin.eof() || strlen(line) == 0) continue;
+				string line_str(line);
+				vector<string> tokens = split(line_str, " ");
+				cerr << line_str << endl;
+				map<string, int>::iterator i = node_index_map.find(tokens[0]), j = node_index_map.find(tokens[1]);
+				assert(i != node_index_map.end() && j != node_index_map.end());
+				ins->edges.push_back(make_pair(i->second,j->second));
+				ins->edge_score_vecs.push_back(sv);
+			}
 
-            //cerr << "#edges=" << ins->edges.size() << endl;
+			//cerr << "#edges=" << ins->edges.size() << endl;
 
-            data.push_back(ins);
+			data.push_back(ins);
 
 			for(Int i=0;i<data.size();i++)
 				data[i]->T = data[i]->labels.size();
@@ -438,9 +625,56 @@ class CompleteGraphProblem : public Problem{
 			}
 
 			K = label_index_map.size();
-
+			
+			ofstream fout("../../data/107network/107network.uai");
+			fout << "MARKOV" << endl;
+			int T = ins->T;
+			fout << T << endl;
+			for (int t = 0; t < T; t++){
+				if (t != 0)
+					fout << " ";
+				fout << K ;
+			}
+			fout << endl;
+			fout << (T + ins->edges.size()) << endl;
+			for (int t = 0; t < T; t++){
+				fout << "1 " << t << endl;
+			}
+			for (int t = 0; t < ins->edges.size(); t++){
+				fout << "2 " << ins->edges[t].first << " " << ins->edges[t].second << endl;
+			}
+			for (int i = 0; i < T; i++){
+				fout << K << endl;
+				Float* c_i = ins->node_score_vecs[i];
+				for (int k = 0; k < K; k++){
+					if (k != 0)
+						fout << " ";
+					fout << exp(-c_i[k]);
+				}
+				fout << endl;
+				fout << endl;
+			}
+			for (int e = 0; e < ins->edges.size(); e++){
+				cerr << e << "/" << ins->edges.size() << endl;
+				int l = ins->edges[e].first, r = ins->edges[e].second;
+				Float* c_e = ins->edge_score_vecs[e]->c;
+				int K1 = ins->node_label_lists[l]->size(), K2 = ins->node_label_lists[r]->size();
+				fout << K1*K2 << endl;
+				for (int k1 = 0; k1 < K1; k1++){
+					for (int k2 = 0; k2 < K2; k2++){
+						if (k2 != 0)
+							fout << " ";
+						fout << exp(-c_e[k1*K2+k2]);
+					}
+					fout << endl;
+				}
+				fout << endl;
+			}
+			
+			fout.close();
+			
 			delete[] line;
-            cerr << "done" << endl;
+			cerr << "done" << endl;
 		}
 };
 

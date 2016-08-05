@@ -11,13 +11,13 @@ Solvers=AD3 MPLP GDMM #PSDD LPsparse Soft-BCFW Soft-BCFW-accurate
 .PRECIOUS: %.log
 
 predict:
-	cp ../../../sparseLP/predict ./
+	cp ../sparseLP/predict ./
 
 mplp:
-	cp ../../../ComparedSolvers/mplp ./
+	cp ../ComparedSolvers/mplp ./
 
 ad3_multi:
-	cp ../../../ComparedSolvers/ad3_multi ./
+	cp ../ComparedSolvers/ad3_multi ./
 
 AD3.log: ad3_multi $(uai_test_file)
 	./ad3_multi --format=uai --file_graphs=EurLex.subtest.uai --file_posteriors=AD3.out --algorithm=ad3 --max_iterations=100000 > $@

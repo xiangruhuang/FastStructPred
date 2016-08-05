@@ -40,7 +40,7 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 		string arg2 = args[i];
 
 		switch(arg[1]){
-			case 'e': param->eta = stof(arg2);
+			case 'o': param->convertFname = arg2;
 				  break;
 			case 'p': param->problem_type = arg2;
 				  break;
