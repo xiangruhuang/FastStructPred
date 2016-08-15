@@ -1,13 +1,13 @@
 FLAG= -fopenmp -std=c++11 -O3 -w
-CC=g++
+CC=g++-4.8
 
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
-data_dir=/scratch/cluster/xrhuang/data/
+data_dir=.#/scratch/cluster/xrhuang/data/
 model_dir=/scratch/cluster/xrhuang/model/
 s=2
-m=10000
+m=100000
 q=1
 e=3
 a=0.1
@@ -21,6 +21,18 @@ infea_tol=1e-3
 testno=1
 
 .PHONY:pos 107network
+
+penguin-gm:
+	$(eval test_file := ../penguin-gm.h5.loguai2)
+	./predict -p loguai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
+
+tsu-gm:
+	$(eval test_file := ../tsu-gm.h5.uai)
+	./predict -p uai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
+
+clownfish:	
+	$(eval test_file := ../clownfish-small.h5.uai)
+	./predict -p uai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
 
 107network:
 	$(eval test_file := $(data_dir)/107network/107network)

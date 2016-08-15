@@ -122,6 +122,7 @@ class UniFactor : public Factor{
 			msgs.clear();
 
 			shrink = true;
+			//fill_act_set();
 			soft_bcfw = false;
 			if (param->solver == 3){
 				shrink = false;
@@ -264,7 +265,7 @@ class UniFactor : public Factor{
 			} else {
 				if (msgs.size() == 0 || fabs(rho) < 1e-12){
 					//min_y <c, y>
-					cerr << "degenerated uni_subsolve!!!!!" << endl;
+					//cerr << "degenerated uni_subsolve!!!!!" << endl;
 					Float cmin = 1e300;
 					int min_index = -1;
 					act_count = 0;
@@ -370,6 +371,15 @@ class UniFactor : public Factor{
 				}
 			}
 			return c[recent_pred];
+		}
+		
+        inline Float rel_score(){
+			Float score = 0.0;
+			for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+				int k = *it;
+				score += c[k]*y[k];
+			}
+			return score;
 		}
 
 		// F = c^T y + \rho/2 \sum_{msg} \|msg \|^2
@@ -517,7 +527,8 @@ class BiFactor : public Factor{
 			is_ever_nnz_r = new bool[K2];
 			memset(is_ever_nnz_r, false, sizeof(bool)*K2);
 			//temporary
-			shrink = true;
+			//fill_act_set();
+            shrink = true;
 			soft_bcfw = false;
 			if (param->solver==3){
 				shrink = false;
@@ -1094,6 +1105,15 @@ class BiFactor : public Factor{
 			int k1k2 = l->recent_pred * K2 + r->recent_pred;
 			return c[k1k2];
 		}
+
+        inline Float rel_score(){
+			Float score = 0.0;
+			for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+				int k1k2 = it->first;
+				score += c[k1k2]*it->second;
+			}
+			return score;
+        }
 
 		// F = c^T Y + \rho/2 (\|msgl \|^2 + \|msgr\|^2_2)
 		inline Float func_val(){
