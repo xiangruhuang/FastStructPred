@@ -1,10 +1,10 @@
 FLAG= -fopenmp -std=c++11 -O3 -w
-CC=g++-4.8
+CC=g++#-4.8
 
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
-data_dir=.#/scratch/cluster/xrhuang/data/
+data_dir=/scratch/cluster/xrhuang/data/
 model_dir=/scratch/cluster/xrhuang/model/
 s=2
 m=100000

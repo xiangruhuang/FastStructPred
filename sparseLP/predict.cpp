@@ -463,11 +463,15 @@ double struct_predict(Problem* prob, Param* param){
 			if (p_inf < param->infea_tol && d_inf < param->grad_tol){
 				countdown++;
 			}
+			Float width = max(ins->largest - ins->smallest, 1e-12);
+			cerr << "largest=" << ins->largest << ", smallest=" << ins->smallest << ", width=" << width << endl;
+			rel_score_t = rel_score_t*width + ins->smallest;
+			score_t = score_t*width + ins->smallest;
 			if ((iter+1) % print_period == 0){
 				if (-score_t > best_decoded){
 					best_decoded = -score_t;
                     cerr << "best primal obj updated to " << best_decoded << endl;
-                    //print_sol(nodes, edges, iter);
+                    print_sol(nodes, edges, iter);
 				}
 				cerr << "iter=" << iter << ", funcval=" << val << ", (-rel_score_t)=" << (-rel_score_t) << ", decoded_t=" << (-score_t) << ", best_decoded=" << best_decoded << ", dinf=" << d_inf << ", p_inf=" << p_inf << ", countdown=" << countdown;
 				stats->display();
@@ -499,7 +503,6 @@ double struct_predict(Problem* prob, Param* param){
 			}
 			round_score -= node->c[pred[i]];
 		}
-		cerr << "middle" << endl;
 		for (int i = 0; i < edges.size(); i++){
 			BiFactor* edge = edges[i];
 			int l = ins->edges[i].first, r = ins->edges[i].second;
