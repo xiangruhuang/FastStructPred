@@ -114,20 +114,6 @@ int main(int argc, char** argv){
 	parse_cmd_line(argc, argv, param);
 
 	Problem* prob = NULL;
-	if (param->problem_type == "chain"){
-		prob = new ChainProblem(param);
-		prob->construct_data();
-		int D = ((ChainProblem*)prob)->D; 
-		int K = ((ChainProblem*)prob)->K; 
-		cerr << "prob.D=" << D << endl;
-		cerr << "prob.K=" << K << endl;
-	}
-	if (param->problem_type == "network"){
-		prob = new CompleteGraphProblem(param);
-		prob->construct_data();
-		int K = ((CompleteGraphProblem*)prob)->K;
-		cerr << "prob.K=" << K << endl;
-	}
 	if (param->problem_type == "multilabel"){
 		prob = new MultiLabelProblem(param);
 		prob->construct_data();
@@ -135,7 +121,7 @@ int main(int argc, char** argv){
 		int K = ((MultiLabelProblem*)prob)->K; 
 		cerr << "prob.D=" << D << endl;
 		cerr << "prob.K=" << K << endl;
-	    convert2uai((MultiLabelProblem*)prob, param->convertFname);
-    }
+	    	convert2uai((MultiLabelProblem*)prob, param->convertFname);
+    	}
 	return 0;
 }

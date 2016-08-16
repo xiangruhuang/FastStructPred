@@ -143,6 +143,13 @@ class PermutationHash {
 	Int K;
 };
 
+inline void readLine(ifstream& fin, char* line){
+	fin.getline(line, LINE_LEN);
+	while (!fin.eof() && strlen(line) == 0){
+		fin.getline(line, LINE_LEN);
+	}
+}
+
 vector<string> split(string str, string pattern){
 
 	vector<string> str_split;
