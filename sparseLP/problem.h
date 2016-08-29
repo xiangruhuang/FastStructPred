@@ -355,11 +355,12 @@ class LOGUAIProblem : public UAIProblem{
 			// number of factors
 			readLine(fin, line);
 			line_str = string(line);
-			vector<string> F_total = split(line_str, " ");
-			int F, total;
-			F = stoi(F_total[0]);
-			total = stoi(F_total[1]);
-			cerr << "F=" << F << ", total=" << total << endl;
+			//vector<string> F_total = split(line_str, " ");
+			
+			int F=stoi(line_str);// total;
+			//F = stoi(F_total[0]);
+			//total = stoi(F_total[1]);
+			cerr << "F=" << F; // << ", total=" << total << endl;
 			vector<string> tables;
 			//map<pair<int, int>, Float*> table_map;
 			for (int f = 0; f < F; f++){

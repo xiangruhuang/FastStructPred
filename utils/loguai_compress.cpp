@@ -43,7 +43,7 @@ int main(int argc, char** argv){
         F_[i] = string(line);
     }
     for (int i = 0; i < F; i++){
-        cerr << unique_.size() << "/" << i << endl;
+        //cerr << unique_.size() << "/" << i << endl;
         int L = -1;
         fin >> L;
         vector<Float> new_mat;
@@ -63,9 +63,9 @@ int main(int argc, char** argv){
         if (index_[i] == unique_.size()){
             unique_.push_back(new_mat);
         }
-        cerr << L << "?" << unique_[0].size() << endl;
+        //cerr << L << "?" << unique_[0].size() << endl;
     }
-    cerr << "#uniques=" << unique_.size() << endl;
+    cerr << "#uniques=" << unique_.size() << "(out of " << F << ")" << endl;
     fout << unique_.size() << endl; // << " " << F << endl;
     for (int i = 0; i < unique_.size(); i++){
         bool flag = false;

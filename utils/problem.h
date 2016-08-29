@@ -138,13 +138,6 @@ class Problem{
 			assert(false);
 		}
 };
-		
-inline void readLine(ifstream& fin, char* line){
-	fin.getline(line, LINE_LEN);
-	while (!fin.eof() && strlen(line) == 0){
-		fin.getline(line, LINE_LEN);
-	}
-}
 
 class UAIProblem : public Problem{
 	public:
