@@ -67,10 +67,10 @@ rcv1:
 	$(eval model := $(model_dir)/multilabel/rcv1.model)
 	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
 
-EurLex:
+EurLex: 
 	$(eval test_file := $(data_dir)/multilabel/Eur-Lex-Small.test)
 	$(eval model := $(model_dir)/multilabel/EurLex.model)
-	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m) -t $(testno) $(test_file) $(model)
+	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model)
 
 protein:
 	$(eval test_file := $(data_dir)/Protein/2BBN.uai)

@@ -36,6 +36,7 @@ class MultiUniFactor : public Factor{
 		Float* y_bar;
 		MultiBiFactor* edge; // assume only one edge connects to it
 
+		int* recent_pred;
 		inline MultiUniFactor(int _K, Float* _c, Param* param){
 			K = _K;
 			rho = param->rho;
@@ -64,6 +65,7 @@ class MultiUniFactor : public Factor{
 			memset(y_bar, 0, sizeof(Float)*K);
 
 			//fill_act_set();
+			recent_pred = new int[K];
 		}
 
 		~MultiUniFactor(){
@@ -107,9 +109,13 @@ class MultiUniFactor : public Factor{
 
 		inline Float score(){
 			Float score = 0.0;
+			memset(recent_pred, 0, sizeof(int)*K);
 			for (vector<pair<Float, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
 				int k = it->second;
-				score += c[k]*it->first;
+				if (it->first > 0.5){
+					recent_pred[k] = 1;
+					score += c[k];
+				}
 			}
 			return score;
 		}
@@ -515,9 +521,11 @@ class MultiBiFactor : public Factor{
 
 		inline Float score(){
 			Float score = 0.0;
-			for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
-				int kk = it->second;
-				score += it->first[3] * c[kk];
+			//for (vector<pair<Float*, int>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+			for (int kk = 0; kk < K*K; kk++){
+				//score += it->first[3] * c[kk];
+				int k1 = kk / K, k2 = kk % K;
+				score += node->recent_pred[k1]*node->recent_pred[k2]*c[kk];
 			}
 			return score;
 		}

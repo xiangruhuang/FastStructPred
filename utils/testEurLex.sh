@@ -5,7 +5,7 @@ cp ../sparseLP/predict ./
 for i in `seq $1 $2`; do
 	head -$i ${datafile} | tail -1 > ${testfile}
 	echo "============================================================================"
-	./convert2uai -p multilabel -o ${testfile}.uai ${testfile} ${modelfile}
+	./multilabel2uai -p multilabel -o ${testfile}.uai ${testfile} ${modelfile}
 	#echo "============================================================================"
 	#./predict -p uai -s 2 -o 0.01 -e 1 -m 100000 ${testfile}.uai ${modelfile}
 	echo "============================================================================"

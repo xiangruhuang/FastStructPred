@@ -144,7 +144,7 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 	int max_iter = param->max_iter;
 	Float score = 0.0;
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
-		//if (n != param->testno) continue;
+		if (n != 1343) continue;
 		Instance* ins = *it_ins;
 		int K = ins->node_label_lists[0]->size();
 		MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
@@ -182,7 +182,7 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 		Float p_inf = 0.0, acc = 0.0, d_inf = 0.0;
 		int iter = 0;
 		Float score_t = 0.0;
-		int print_period = 1000000;
+		int print_period = 1;
 		Float best_decoded = -1e100;
 		while (iter++ < max_iter){
 			//cerr << "========================================================" << endl;
@@ -347,7 +347,7 @@ double struct_predict(Problem* prob, Param* param){
 		while (iter < max_iter){
 			score_t = 0.0; rel_score_t = 0.0;
 			val = 0.0;
-            random_shuffle(node_indices, node_indices+nodes.size());
+            		random_shuffle(node_indices, node_indices+nodes.size());
 			for (int n = 0; n < nodes.size(); n++){
 				UniFactor* node = nodes[node_indices[n]];
 
@@ -375,7 +375,9 @@ double struct_predict(Problem* prob, Param* param){
 			for (int e = 0; e < edges.size(); e++){
 				BiFactor* edge = edges[edge_indices[e]];
 
+				//cerr << "hey0" << endl;
 				edge->search();
+				//cerr << "hey1" << endl;
 
 				edge->subsolve();
 				/*while (edge->dual_inf() > param->grad_tol){
@@ -440,7 +442,7 @@ double struct_predict(Problem* prob, Param* param){
 					p_inf = inf;
 				prediction_time += get_current_time();
 				score_t += edge->score();
-                rel_score_t += edge->rel_score();
+                		rel_score_t += edge->rel_score();
 				val += edge->func_val();
 				stats->bi_act_size += edge->act_set.size();
 				stats->ever_nnz_msg_size += (edge->ever_nnz_msg_l.size() + edge->ever_nnz_msg_r.size())/2;

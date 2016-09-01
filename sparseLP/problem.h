@@ -40,9 +40,9 @@ class Param{
 class ScoreVec{
 	public:
 		Float* c; // score vector: c[k1k2] = -v[k1k2/K][k1k2%K];
-		pair<Float, int>* sorted_c; // sorted <score, index> vector; 
-		pair<Float, int>** sorted_row; // sorted <score, index> vector of each row
-		pair<Float, int>** sorted_col; // sorted <score, index> vector of each column
+		pair<Float, int>* sorted_c = NULL; // sorted <score, index> vector; 
+		pair<Float, int>** sorted_row = NULL; // sorted <score, index> vector of each row
+		pair<Float, int>** sorted_col = NULL; // sorted <score, index> vector of each column
 		int K1, K2;
 		ScoreVec(Float* _c, int _K1, int _K2){
 			//sort c as well as each row and column in increasing order
@@ -150,6 +150,7 @@ class Instance{
 		//}
 		void normalize(){
 			Float width = max(largest - smallest, 1e-12);
+			cerr << "normalizing #tables=" << table_in_memory.size() << endl;
 			for (vector<pair<Float*, int>>::iterator it = table_in_memory.begin(); it != table_in_memory.end(); it++){
 				Float* c = it->first;
 				int L = it->second;
@@ -257,6 +258,8 @@ class UAIProblem : public Problem{
 
 			//cerr << "done with preamble" << endl;
 
+			ins->smallest=1e100; ins->largest=-1e100;
+			ins->table_in_memory.clear();	
 			// read tables
 			for (int f = 0; f < F; f++){
 				//cerr << f << "/" << F << endl;
@@ -274,10 +277,17 @@ class UAIProblem : public Problem{
 					  string line_str(line);
 					  tokens = split(line_str, " ");
 					  assert(tokens.size() == K);*/
+					ins->table_in_memory.push_back(make_pair(c_i, K));
 					for (int k = 0; k < K; k++){
 						Float val; // = stof(tokens[k]);
 						fin >> val;
 						c_i[k] += -log(val);
+						if (c_i[k] < ins->smallest){
+							ins->smallest = c_i[k];
+						} 	
+						if (c_i[k] > ins->largest){
+							ins->largest = c_i[k];
+						}
 					}
 				} else {
 					assert(d == 2);
@@ -292,17 +302,27 @@ class UAIProblem : public Problem{
 					int KK;
 					fin >> KK;
 					assert(KK = K1 * K2);
+					ins->table_in_memory.push_back(make_pair(c_e, KK));
 					for (int k1 = 0; k1 < K1; k1++){
 						for (int k2 = 0; k2 < K2; k2++){
 							Float val;
 							fin >> val;
 							c_e[k1*K2+k2] += -log(val);
+							if (c_e[k1*K2+k2] < ins->smallest){
+								ins->smallest = c_e[k1*K2+k2];
+							} 	
+							if (c_e[k1*K2+k2] > ins->largest){
+								ins->largest = c_e[k1*K2+k2];
+							}
 						}
 					}
 				}
 			}
-			//cerr << "done reading uai file" << endl;			
+			cerr << "done reading uai file" << endl;			
 
+			ins->largest=1.0;
+			ins->smallest=0.0;
+			ins->normalize();
 			//sort each ScoreVec after all values read
 			for (int i = 0; i < ins->edges.size(); i++){
 				ScoreVec* sv = ins->edge_score_vecs[i];
@@ -780,6 +800,7 @@ class CompleteGraphProblem : public Problem{
 			}
 
 			sv = new ScoreVec(c, K, K);
+			sv->internal_sort();
 			while (!fin.eof()){
 				readLine(fin, line);
 				if (fin.eof() || strlen(line) == 0) continue;
@@ -815,7 +836,7 @@ class CompleteGraphProblem : public Problem{
 
 			K = label_index_map.size();
 
-			ofstream fout("../../data/107network/107network.uai");
+			/*ofstream fout("../../data/107network/107network.uai");
 			fout << "MARKOV" << endl;
 			int T = ins->T;
 			fout << T << endl;
@@ -861,7 +882,8 @@ class CompleteGraphProblem : public Problem{
 			}
 
 			fout.close();
-
+			*/
+			ins->largest = 1.0; ins->smallest = 0.0;
 			delete[] line;
 			cerr << "done" << endl;
 		}
@@ -1088,7 +1110,7 @@ class ChainProblem : public Problem{
 			}
 			//store them in ScoreVec
 			sv = new ScoreVec(c, K, K);
-
+			sv->internal_sort();
 			if (param->solver == 1){
 				//extra sorting time is counted
 				prediction_time += omp_get_wtime();

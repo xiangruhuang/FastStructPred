@@ -51,7 +51,10 @@ clownfish-small.h5:
 	rm -rf color-seg-n4/
 	rm -f color-seg-n.zip	
 
+
 modeldir=/scratch/cluster/xrhuang/model/multilabel/EurLex.model
 
 EurLex575.uai: multilabel2uai
 	./multilabel2uai -p multilabel -o EurLex575.uai EurLex575.test $(modeldir)
+
+
