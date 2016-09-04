@@ -23,6 +23,8 @@ multilabel2uai:
 %.loguai2: %.loguai loguai_compress
 	./loguai_compress $< $@
 
+h5_files: penguin-gm.h5 house-gm.h5 tsu-gm.h5 clownfish-small.h5
+
 penguin-gm.h5:
 	wget http://hciweb2.iwr.uni-heidelberg.de/opengm/benchmarks/models/zip/mrf-inpainting.zip
 	unzip mrf-inpainting.zip
