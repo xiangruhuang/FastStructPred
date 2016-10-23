@@ -48,6 +48,11 @@ void parse_cmd_line(int argc, char** argv, Param* param){
 
 		string arg2 = args[i];
 
+		if (arg == "--printmodel"){
+			param->print_to_loguai2 = true;
+			param->loguai2fname = arg2;
+			continue;
+		}
 		switch(arg[1]){
 			case 's': param->solver = stoi(arg2);
 				  break;
@@ -124,16 +129,16 @@ inline Float compute_acc(Instance* ins, vector<UniFactor*> nodes){
 }
 
 void print_sol(vector<UniFactor*>& nodes, vector<BiFactor*>& edges, int iter){
-    string name = string("GDMM.sol");
-    ofstream fout(name+to_string(iter));
-    fout << nodes.size() << endl;
-    //fout << edges.size() << endl;
-    for (vector<UniFactor*>::iterator it = nodes.begin(); it != nodes.end(); it++){
-        UniFactor* node = *it;
-        fout << node->recent_pred << " ";
-    }
-    fout << endl;
-    fout.close();
+	string name = string("GDMM.sol");
+	ofstream fout(name+to_string(iter));
+	fout << nodes.size() << endl;
+	//fout << edges.size() << endl;
+	for (vector<UniFactor*>::iterator it = nodes.begin(); it != nodes.end(); it++){
+		UniFactor* node = *it;
+		fout << node->recent_pred << " ";
+	}
+	fout << endl;
+	fout.close();
 }
 
 double struct_predict(MultiLabelProblem* prob, Param* param){
@@ -144,7 +149,6 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 	int max_iter = param->max_iter;
 	Float score = 0.0;
 	for (vector<Instance*>::iterator it_ins = prob->data.begin(); it_ins != prob->data.end(); it_ins++, n++){
-		if (n != 1343) continue;
 		Instance* ins = *it_ins;
 		int K = ins->node_label_lists[0]->size();
 		MultiUniFactor* node = new MultiUniFactor(K, ins->node_score_vecs[0], param);
@@ -219,7 +223,7 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 			node->update_multipliers();
 			edge->update_multipliers();
 
-			prediction_time += get_current_time();
+			//prediction_time += get_current_time();
 			//node->check_integrity();
 			//edge->check_integrity();
 			score_t = node->score() + edge->score();
@@ -227,7 +231,7 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 			p_inf = edge->infea();
 			d_inf = edge->dual_inf() + node->dual_inf();
 
-			prediction_time -= get_current_time();
+			//prediction_time -= get_current_time();
 			if (debug){
 				//cerr << "d_inf=" << d_inf << ", p_inf=" << p_inf << endl;
 			}
@@ -235,7 +239,20 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 				if (-score_t > best_decoded){
 					best_decoded = -score_t;
 				}
+				hit = 0.0;
+				Float bottom = 0.0;
+				for (int k = 0; k < K; k++){
+					Float true_yk = (find(ins->labels.begin(), ins->labels.end(), k) != ins->labels.end())? 1.0:0.0;
+					Float distance = fabs(true_yk - node->y[k]);
+					if (true_yk == 1){
+						hit += (1 - distance)*100; bottom += 100.0;
+					} else {
+						hit += (1 - distance); bottom += 1.0;
+					}
+				}
+				acc = hit/bottom;
 				cerr << "iter=" << iter << ", decoded_t=" << (-score_t) << ", best_decoded=" << best_decoded << ", dinf=" << d_inf << ", p_inf=" << p_inf;
+				cerr << ", acc=" << acc;
 				stats->display();
 				stats->display_time();
 				cerr << ", overall time=" << (prediction_time + (double)get_current_time());
@@ -250,6 +267,7 @@ double struct_predict(MultiLabelProblem* prob, Param* param){
 		//node->display();
 		//edge->display();
 		//compute hamming loss
+		hit = 0.0;
 		Float T = ins->labels.size();
 		for (int k = 0; k < K; k++){
 			Float true_yk = (find(ins->labels.begin(), ins->labels.end(), k) != ins->labels.end())? 1.0:0.0;
@@ -347,7 +365,9 @@ double struct_predict(Problem* prob, Param* param){
 		while (iter < max_iter){
 			score_t = 0.0; rel_score_t = 0.0;
 			val = 0.0;
-            		random_shuffle(node_indices, node_indices+nodes.size());
+			stats->delta_Y_l1 = 0.0;
+			stats->weight_b = 0.0;
+			random_shuffle(node_indices, node_indices+nodes.size());
 			for (int n = 0; n < nodes.size(); n++){
 				UniFactor* node = nodes[node_indices[n]];
 
@@ -355,21 +375,20 @@ double struct_predict(Problem* prob, Param* param){
 
 				//cerr << "==============" << endl;
 				node->subsolve();
-				
-				/*while (node->dual_inf() > param->grad_tol){
-					node->subsolve();
-					node->display();
-					int K = node->K;
-					//cerr << "K=" << K << endl;
-					cerr << "grad:\t";
-					for (vector<int>::iterator it = node->act_set.begin(); it != node->act_set.end(); it++)
-						cerr << *it << ":" << node->grad[*it] << " ";
-					cerr << endl;
-					cerr << "dinf=" << node->dual_inf() << endl;
-				}*/
-				
-			}
 
+				/*while (node->dual_inf() > param->grad_tol){
+				  node->subsolve();
+				  node->display();
+				  int K = node->K;
+				//cerr << "K=" << K << endl;
+				cerr << "grad:\t";
+				for (vector<int>::iterator it = node->act_set.begin(); it != node->act_set.end(); it++)
+				cerr << *it << ":" << node->grad[*it] << " ";
+				cerr << endl;
+				cerr << "dinf=" << node->dual_inf() << endl;
+				}*/
+
+			}
 
 			random_shuffle(edge_indices, edge_indices+edges.size());
 			for (int e = 0; e < edges.size(); e++){
@@ -381,8 +400,8 @@ double struct_predict(Problem* prob, Param* param){
 
 				edge->subsolve();
 				/*while (edge->dual_inf() > param->grad_tol){
-					edge->subsolve();
-				}*/
+				  edge->subsolve();
+				  }*/
 
 			}
 
@@ -406,6 +425,7 @@ double struct_predict(Problem* prob, Param* param){
 
 			//cerr << "==========================" << endl;
 
+			
 			d_inf = 0.0; int dinf_index = -1; int dinf_factor_index = -1;
 			int node_count = 0;
 			for (vector<UniFactor*>::iterator it_node = nodes.begin(); it_node != nodes.end(); it_node++, node_count++){
@@ -415,15 +435,12 @@ double struct_predict(Problem* prob, Param* param){
 					d_inf = gmax_node;
 					dinf_index = node->dinf_index;
 					dinf_factor_index = node_count;
-					//cerr << setprecision(10) << "node" << node_count << ":" << d_inf << ", act_size=" << node->act_set.size() << ", k=" << dinf_index << ", y=" << node->y[dinf_index] << ", grad=" << node->grad[dinf_index] << endl;
 				}
-				prediction_time += get_current_time();
 				score_t += node->score();
-                rel_score_t += node->rel_score();
+				rel_score_t += node->rel_score();
 				val += node->func_val();
 				stats->uni_act_size += node->act_set.size();
 				stats->num_uni++;
-				prediction_time -= get_current_time();
 			}
 
 			int edge_count = 0;
@@ -438,17 +455,18 @@ double struct_predict(Problem* prob, Param* param){
 					//cerr << "edge" << edge_count << " " << d_inf << endl;
 				}
 				Float inf = edge->infea();
-				if (inf > p_inf)
-					p_inf = inf;
-				prediction_time += get_current_time();
+				/*if (inf > p_inf)
+					p_inf = inf;*/
+				p_inf += inf;
+				////prediction_time += get_current_time();
 				score_t += edge->score();
-                		rel_score_t += edge->rel_score();
+				rel_score_t += edge->rel_score();
 				val += edge->func_val();
 				stats->bi_act_size += edge->act_set.size();
 				stats->ever_nnz_msg_size += (edge->ever_nnz_msg_l.size() + edge->ever_nnz_msg_r.size())/2;
 				stats->num_bi++;
 				nnz_msg += edge->nnz_msg();
-				prediction_time -= get_current_time();
+				////prediction_time -= get_current_time();
 			}
 			Float g = 0.0;  
 			if (dinf_factor_index != -1){
@@ -465,17 +483,19 @@ double struct_predict(Problem* prob, Param* param){
 			if (p_inf < param->infea_tol && d_inf < param->grad_tol){
 				countdown++;
 			}
+			
+
 			Float width = max(ins->largest - ins->smallest, 1e-12);
 			cerr << "largest=" << ins->largest << ", smallest=" << ins->smallest << ", width=" << width << endl;
-			rel_score_t = rel_score_t*width + ins->smallest;
-			score_t = score_t*width + ins->smallest;
+			rel_score_t = rel_score_t*width + ins->smallest*(edges.size()+nodes.size());
+			score_t = score_t*width + ins->smallest*(edges.size()+nodes.size());
 			if ((iter+1) % print_period == 0){
 				if (-score_t > best_decoded){
 					best_decoded = -score_t;
-                    cerr << "best primal obj updated to " << best_decoded << endl;
-                    print_sol(nodes, edges, iter);
+					cerr << "best primal obj updated to " << best_decoded << endl;
+					//print_sol(nodes, edges, iter);
 				}
-				cerr << "iter=" << iter << ", funcval=" << val << ", (-rel_score_t)=" << (-rel_score_t) << ", decoded_t=" << (-score_t) << ", best_decoded=" << best_decoded << ", dinf=" << d_inf << ", p_inf=" << p_inf << ", countdown=" << countdown;
+				cerr << "iter=" << iter << ", funcval=" << val << ", (-rel_score_t)=" << (-rel_score_t) << ", decoded_t=" << (-score_t) << ", best_decoded=" << best_decoded << ", dinf=" << d_inf << ", p_inf=" << p_inf << ", countdown=" << countdown << ", delta_Y_l1 per factor=" << stats->delta_Y_l1/(edges.size()+nodes.size()) << ", weight_b=" << stats->weight_b/(edges.size()+nodes.size());
 				stats->display();
 				stats->display_time();
 				cerr << ", overall time=" << (prediction_time + (double)get_current_time());
@@ -489,13 +509,13 @@ double struct_predict(Problem* prob, Param* param){
 		//nnz_msg /= edges.size()*(iter+1);
 		score += score_t;
 
-		Float round_score = 0.0;
+		/*Float round_score = 0.0;
 		int* pred = new int[nodes.size()];
 		for (int i = 0; i < nodes.size(); i++){
 			UniFactor* node = nodes[i];
 			Float r = (Float)rand()/RAND_MAX;
 			int K = node->K;
-			
+
 			for (int k = 0; k < K; k++){
 				if (r <= node->y[k]){
 					pred[i] = k;
@@ -510,18 +530,18 @@ double struct_predict(Problem* prob, Param* param){
 			int l = ins->edges[i].first, r = ins->edges[i].second;
 			int K2 = edge->K2;
 			round_score -= edge->c[pred[l]*K2 + pred[r]];
-		}
-	
-		prediction_time += get_current_time();
-		acc = compute_acc(ins, nodes);
-		prediction_time -= get_current_time();
+		}*/
+
+		//prediction_time += get_current_time();
+		//acc = compute_acc(ins, nodes);
+		//prediction_time -= get_current_time();
 
 		cerr << "@" << n
 			<< ": iter=" << iter
 			<< ", T=" << ins->T
 			<< ", acc=" << acc
 			<< ", score=" << score 
-			<< ", round_score=" << round_score
+			//<< ", round_score=" << round_score
 			<< ", infea=" << p_inf
 			<< ", dinf=" << d_inf
 			<< ", avg_nnz_msg=" << nnz_msg / (iter+1) / edges.size();
@@ -659,13 +679,16 @@ int main(int argc, char** argv){
 		exit_with_help();
 	}
 
+	prediction_time = -get_current_time();
 	srand(time(NULL));
 	Param* param = new Param();
 	parse_cmd_line(argc, argv, param);
 
 	Problem* prob = NULL;
 	if (param->problem_type == "chain"){
+		prediction_time += get_current_time();
 		prob = new ChainProblem(param);
+		prediction_time -= get_current_time();
 		prob->construct_data();
 		int D = ((ChainProblem*)prob)->D; 
 		int K = ((ChainProblem*)prob)->K; 
@@ -673,28 +696,45 @@ int main(int argc, char** argv){
 		cerr << "prob.K=" << K << endl;
 	}
 	if (param->problem_type == "network"){
+		prediction_time += get_current_time();
 		prob = new CompleteGraphProblem(param);
+		prediction_time -= get_current_time();
 		prob->construct_data();
 		int K = ((CompleteGraphProblem*)prob)->K;
 		cerr << "prob.K=" << K << endl;
+		if (param->print_to_loguai2){
+			cerr << "output to loguai2 file:" << param->loguai2fname << endl;
+			((CompleteGraphProblem*)prob)->print_to_loguai2(param->loguai2fname);
+			exit(0);
+		}
 	}
 	if (param->problem_type == "multilabel"){
+		prediction_time += get_current_time();
 		prob = new MultiLabelProblem(param);
 		prob->construct_data();
+		prediction_time -= get_current_time();
 		int D = ((MultiLabelProblem*)prob)->D; 
 		int K = ((MultiLabelProblem*)prob)->K; 
 		cerr << "prob.D=" << D << endl;
 		cerr << "prob.K=" << K << endl;
 	}
 	if (param->problem_type == "uai"){
+		prediction_time += get_current_time();
 		prob = new UAIProblem(param);
+		prediction_time -= get_current_time();
 		prob->construct_data();
+		Float avgK = ((UAIProblem*)prob)->avgK;
+		cerr << "prob.avg_domain_size=" << avgK << endl;
 	}
 
-    if (param->problem_type == "loguai"){
-        prob = new LOGUAIProblem(param);
-        prob->construct_data();
-    }
+	if (param->problem_type == "loguai"){
+		prediction_time += get_current_time();
+		prob = new LOGUAIProblem(param);
+		prediction_time -= get_current_time();
+		prob->construct_data();
+		cerr << "prob.N=";
+		cerr << prob->data.size() << endl;
+	}
 
 	if (prob == NULL){
 		cerr << "Need to specific problem type!" << endl;
@@ -721,7 +761,6 @@ int main(int argc, char** argv){
 	   cerr << get_current_time() - t1 << endl;
 	 */
 
-	prediction_time = -get_current_time();
 	if (param->solver == 0){
 		cerr << "Acc=" << Viterbi_predict((ChainProblem*)prob, param) << endl;
 	} 

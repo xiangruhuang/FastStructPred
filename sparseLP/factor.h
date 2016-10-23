@@ -15,6 +15,8 @@ class Stats{
 		int num_uni; 
 		Float uni_act_size;
 		Float ever_nnz_msg_size;
+		Float delta_Y_l1;
+		Float weight_b;		
 
 		double uni_search_time = 0.0;
 		double uni_subsolve_time = 0.0;
@@ -22,6 +24,7 @@ class Stats{
 		double bi_subsolve_time = 0.0;
 		double maintain_time = 0.0;
 		double construct_time = 0.0;
+		
 
 		Stats(){
 			clear();
@@ -95,6 +98,8 @@ class UniFactor : public Factor{
 		int searched_index;
 		vector<BiFactor*> edge_to_right;
 		vector<BiFactor*> edge_to_left;
+		Float largest, smallest;
+		Float weight_b = 1.0;
 
 		inline UniFactor(int _K, Float* _c, Param* param){
 			K = _K;
@@ -102,6 +107,19 @@ class UniFactor : public Factor{
 			nnz_tol = param->nnz_tol;
 			//compute score vector
 			c = _c;
+			largest = -1e100;
+			smallest = 1e100;
+			for (int i = 0; i < K; i++){
+				if (fabs(c[i]) > 1e5){
+					continue;
+				}
+				if (largest < c[i]){
+					largest = c[i];
+				}
+				if (smallest > c[i]){
+					smallest = c[i];
+				}
+			}
 
 			//cache of gradient
 			grad = new Float[K];
@@ -122,7 +140,7 @@ class UniFactor : public Factor{
 			msgs.clear();
 
 			shrink = true;
-			//fill_act_set();
+			//fill_act_set(); shrink = false;
 			soft_bcfw = false;
 			if (param->solver == 3){
 				shrink = false;
@@ -200,68 +218,80 @@ class UniFactor : public Factor{
 			Float* y_new = new Float[act_set.size()];
 			int act_count = 0;
 			if (soft_bcfw){
+				Float l1_sum = 0.0;
 				for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
 					int k = *it;
 					grad[k] = c[k];
+					l1_sum += y[k];
 				}
-				Float dot_prod = 0.0;
-				for (vector<Float*>::iterator m = msgs.begin(); m != msgs.end(); m++){
-					Float* msg = *m;
+				if (l1_sum < 1.0){
+					int min_cindex = 0;
+					for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+						y_new[*it] = 0.0;
+						if (c[*it] < c[min_cindex]){
+							min_cindex = *it;
+						}
+					}
+					y_new[min_cindex] = 1.0;
+				} else {
+					Float dot_prod = 0.0;
+					for (vector<Float*>::iterator m = msgs.begin(); m != msgs.end(); m++){
+						Float* msg = *m;
+						for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+							int k = *it;
+							grad[k] -= rho * msg[k];
+						}
+					}
+					//max gradient inside active set
+					Float gmin = 1e300;
+					int min_index = -1;
 					for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
 						int k = *it;
-						grad[k] -= rho * msg[k];
+						dot_prod += y[k] * grad[k];
+						if (grad[k] < gmin){
+							gmin = grad[k];
+							min_index = k;
+						}
 					}
-				}
-				//max gradient inside active set
-				Float gmin = 1e300;
-				int min_index = -1;
-				for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-					int k = *it;
-					dot_prod += y[k] * grad[k];
-					if (grad[k] < gmin){
-						gmin = grad[k];
-						min_index = k;
+					//cerr << "get direction:" << min_index << endl;
+					if (dot_prod - gmin <= 1e-12){
+						delete[] y_new;
+						stats->uni_subsolve_time += get_current_time();
+						return;
 					}
-				}
-				//cerr << "get direction:" << min_index << endl;
-				if (dot_prod - gmin <= 1e-12){
-					delete[] y_new;
-					stats->uni_subsolve_time += get_current_time();
-					return;
-				}
-	
-				//up = -<grad, \Delta Y>, down = A/2 \|\Delta Y\|_2^2
-				Float up = 0.0, down = 0.0;
-				Float A = msgs.size() * rho;
 
-				for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
-					int k = *it;
-					Float g = grad[k];
-					Float delta_y = -y[k];
-					if (k == min_index){
-						delta_y += 1;
-					}
-					up -= g * delta_y;
-					down += A * delta_y * delta_y;
-				}
-				//cerr << "up=" << up << ", down=" << down << endl;
-				//assert(fabs(down)>1e-12);
-				Float gamma = up/down;
-				if (gamma < 0)
-					gamma = 0;
-				if (gamma > 1)
-					gamma = 1;
-				//cerr << "gamma=" << gamma << endl;
-				act_count = 0;
-				for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-					int k = *it;
-					Float delta_y = -y[k];
-					if (k == min_index){
-						delta_y += 1;
-					}
-					y_new[act_count] = y[k] + delta_y * gamma;
-				}
+					//up = -<grad, \Delta Y>, down = A/2 \|\Delta Y\|_2^2
+					Float up = 0.0, down = 0.0;
+					Float A = msgs.size() * rho;
 
+					for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
+						int k = *it;
+						Float g = grad[k];
+						Float delta_y = -y[k];
+						if (k == min_index){
+							delta_y += 1;
+						}
+						up -= g * delta_y;
+						down += A * delta_y * delta_y;
+					}
+					//cerr << "up=" << up << ", down=" << down << endl;
+					//assert(fabs(down)>1e-12);
+					Float gamma = up/down;
+					if (gamma < 0)
+						gamma = 0;
+					if (gamma > 1)
+						gamma = 1;
+					//cerr << "gamma=" << gamma << endl;
+					act_count = 0;
+					for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+						int k = *it;
+						Float delta_y = -y[k];
+						if (k == min_index){
+							delta_y += 1;
+						}
+						y_new[act_count] = y[k] + delta_y * gamma;
+					}
+				}
 			} else {
 				if (msgs.size() == 0 || fabs(rho) < 1e-12){
 					//min_y <c, y>
@@ -298,15 +328,19 @@ class UniFactor : public Factor{
 					}
 					int n = msgs.size();
 					act_count = 0;
+					weight_b = 0.0;
 					for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 						int k = *it;
 						b[act_count] -= c[k]/rho;
 						b[act_count] /= (Float)n;
 						b[act_count] += y[k];
+						if (b[act_count] > 0.0){
+							weight_b += b[act_count];
+						}
 						//cerr << b[act_count] << " ";
 					}
+					stats->weight_b += weight_b;
 					//cerr << endl;
-
 					solve_simplex(act_set.size(), y_new, b);
 					delete[] b;
 				}
@@ -321,6 +355,7 @@ class UniFactor : public Factor{
 				for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 					int k = *it;
 					Float delta_y = y_new[act_count] - y[k];
+					stats->delta_Y_l1 += fabs(delta_y);
 					msg[k] -= delta_y; // since msg = M Y - y + \mu
 				}
 			}
@@ -370,6 +405,7 @@ class UniFactor : public Factor{
 					max_y = y[k];
 				}
 			}
+			//cerr << "recent_pred=" << recent_pred << ", c=" << c[recent_pred] << endl;
 			return c[recent_pred];
 		}
 		
@@ -404,7 +440,7 @@ class UniFactor : public Factor{
 			cerr << endl;
 			for (vector<int>::iterator it = act_set.begin(); it != act_set.end(); it++){
 				int k = *it;
-				cerr << k << ":" << y[k] << " ";
+				cerr << k << ":" << y[k] << ":" << c[k] << " ";
 			}
 			cerr << endl;
 			/*for (int k = 0; k < K; k++)
@@ -463,7 +499,7 @@ class BiFactor : public Factor{
 		bool shrink;
 		//maintained
 		Float* msgl; // message to UniFactor l
-		Float* msgr; // messageto UniFactor r
+		Float* msgr; // message to UniFactor r
 		Float* sumcol; // sumcol[k] = sum(y[:][k])
 		Float* sumrow; // sumrow[k] = sum(y[k][:])
 		//Float* Y; // relaxed prediction matrix (vector)
@@ -478,6 +514,11 @@ class BiFactor : public Factor{
 		int check_num;
 		vector<pair<Float, int>> sorted_ever_act_c;
 		bool updated;
+		Float weight_b = 1.0;
+		//Float smallest, largest;
+		Float* last_msg_hat_l;
+		Float* last_msg_hat_r;
+		bool accelerate = false;
 
 		inline BiFactor(UniFactor* _l, UniFactor* _r, ScoreVec* sv, Param* param){
 			l = _l;
@@ -485,8 +526,14 @@ class BiFactor : public Factor{
 			K1 = l->K;
 			K2 = r->K;
 			rho = param->rho;
-			eta = param->eta;
 			nnz_tol = param->nnz_tol;
+			
+			if (accelerate){
+				last_msg_hat_l = new Float[K1];
+				memset(last_msg_hat_l, 0.0, sizeof(Float)*K1);
+				last_msg_hat_r = new Float[K2];
+				memset(last_msg_hat_r, 0.0, sizeof(Float)*K2);
+			}
 
 			msgl = new Float[K1];
 			memset(msgl, 0.0, sizeof(Float)*K1);
@@ -506,6 +553,7 @@ class BiFactor : public Factor{
 			sorted_row = sv->sorted_row;
 			sorted_col = sv->sorted_col;
 			double_zero_area_index = 0;
+			eta = param->eta;
 
 			//Y = new Float[K1*K2];
 			//memset(Y, 0.0, sizeof(Float)*K1*K2);
@@ -527,8 +575,8 @@ class BiFactor : public Factor{
 			is_ever_nnz_r = new bool[K2];
 			memset(is_ever_nnz_r, false, sizeof(bool)*K2);
 			//temporary
-			//fill_act_set();
-            shrink = true;
+            		shrink = true;
+			//fill_act_set(); shrink=false;
 			soft_bcfw = false;
 			if (param->solver==3){
 				shrink = false;
@@ -556,6 +604,11 @@ class BiFactor : public Factor{
 			ever_nnz_msg_r.clear();
 			delete[] is_ever_nnz_l;
 			delete[] is_ever_nnz_r;
+		
+			if (accelerate){	
+				delete last_msg_hat_l;
+				delete last_msg_hat_r;
+			}
 		}
 
 		void fill_act_set(){
@@ -580,26 +633,30 @@ class BiFactor : public Factor{
 			}
 		}
 
-		Float gmax = -1e100;
+		Float gmin = 1e100;
 		inline void naive_search(){
 			fill_inside();
 			//compute gradient
 
 			//find max (-gradient)
-			gmax = -1e100;
-			int max_index = -1;
-			for (Int k1k2 = 0; k1k2 < K1 * K2; k1k2++){
-				if (inside[k1k2]) continue;
-				int k1=k1k2/K2, k2 = k1k2%K2;
-				Float g = c[k1k2] + rho * (msgl[k1] + msgr[k2]);
-				if (-g > gmax){
-					gmax = -g;
-					max_index = k1k2;
+			gmin = 1e100;
+			int best_index = -1;
+			Float g = 0.0;
+			for (Int k1 = 0; k1 < K1; k1++){
+				int Kk = K2*k1; 
+				Float msgl_k1 = msgl[k1];
+				for (Int k2 = 0; k2 < K2; k2++){
+					if (inside[Kk+k2]) continue;
+					g = c[Kk+k2] + rho * (msgl_k1 + msgr[k2]);
+					if (g < gmin){
+						gmin = g;
+						best_index = Kk+k2;
+					}
 				}
 			}
-			searched_index = max_index;
-			if (max_index != -1){
-				//act_set.push_back(make_pair(max_index, 0.0));
+			searched_index = best_index;
+			if (best_index != -1){
+				act_set.push_back(make_pair(best_index, 0.0));
 				//inside[max_index] = true;
 			}
 			//cerr << "gmax=" << gmax << ", searched_index=" << searched_index << ", ever_l="<< l->is_ever_act[searched_index / K2] << ", ever_r=" << r->is_ever_act[searched_index % K2]
@@ -666,6 +723,9 @@ class BiFactor : public Factor{
 		//bi_search()
 		inline void search(){
 			fill_inside();
+			if (K1 * K2 < 500){
+				naive_search();
+			}
 			stats->bi_search_time -= get_current_time();
 			if (updated){
 				updated = false;
@@ -940,52 +1000,62 @@ class BiFactor : public Factor{
 				Float gmin = 1e300;
 				Float dot_prod = 0.0;
 				int min_index = -1;
+				Float l1_sum = 0.0;
 				for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
 					int k1k2 = it->first;
 					int k1 = k1k2/K2, k2 = k1k2 % K2;
 					Float g = c[k1k2] + rho*(msgl[k1] + msgr[k2]);
 					dot_prod += g * it->second;
+					l1_sum += it->second;
 					if (g < gmin){
 						gmin = g;
 						min_index = k1k2;
 					}
 				}
-				if (dot_prod - gmin <= 1e-12){
-					
-					stats->bi_subsolve_time += get_current_time();
-					delete[] Y_new;
-					return;
-				}
-
-				//up = -<grad, \Delta Y>, down = A/2 \|\Delta Y\|_2^2
-				Float up = 0.0, down = 0.0;
-
-				for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
-					int k1k2 = it->first;
-					int k1 = k1k2/K2, k2 = k1k2 % K2;
-					Float g = c[k1k2] + rho*(msgl[k1] + msgr[k2]);
-					Float delta_Y = -it->second;
-					if (k1k2 == min_index){
-						delta_Y += 1;
+				if (l1_sum < 1.0){
+					for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+						Y_new[it->first] = 0.0;
+						if (it->first == sorted_c[0].second)
+							Y_new[it->first] = 1.0;
 					}
-					up -= g * delta_Y;
-					down += A * delta_Y * delta_Y;
-				}
-				//cerr << "down=" << down << endl;
-				//assert(fabs(down)>1e-12);
-				Float gamma = up/down;
-				if (gamma < 0)
-					gamma = 0;
-				if (gamma > 1)
-					gamma = 1;
-				act_count = 0;
-				for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
-					int k1k2 = it->first;
-					Float delta_Y = -it->second;
-					if (k1k2 == min_index){
-						delta_Y += 1;
+				} else {
+					if (dot_prod - gmin <= 1e-12){
+
+						stats->bi_subsolve_time += get_current_time();
+						delete[] Y_new;
+						return;
 					}
-					Y_new[act_count] = it->second + delta_Y * gamma;
+
+					//up = -<grad, \Delta Y>, down = A/2 \|\Delta Y\|_2^2
+					Float up = 0.0, down = 0.0;
+					//Float A = 2*rho;
+					for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++){
+						int k1k2 = it->first;
+						int k1 = k1k2/K2, k2 = k1k2 % K2;
+						Float g = c[k1k2] + rho*(msgl[k1] + msgr[k2]);
+						Float delta_Y = -it->second;
+						if (k1k2 == min_index){
+							delta_Y += 1;
+						}
+						up -= g * delta_Y;
+						down += A * delta_Y * delta_Y;
+					}
+					//cerr << "down=" << down << endl;
+					//assert(fabs(down)>1e-12);
+					Float gamma = up/down;
+					if (gamma < 0)
+						gamma = 0;
+					if (gamma > 1)
+						gamma = 1;
+					act_count = 0;
+					for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
+						int k1k2 = it->first;
+						Float delta_Y = -it->second;
+						if (k1k2 == min_index){
+							delta_Y += 1;
+						}
+						Y_new[act_count] = it->second + delta_Y * gamma;
+					}
 				}
 			} else {
 				if (fabs(A) < 1e-12 || act_set.size() == 0){
@@ -1008,12 +1078,17 @@ class BiFactor : public Factor{
 				} else {
 					Float* C = new Float[act_set.size()];
 					act_count = 0;
+					weight_b = 0.0;
 					for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 						int k1k2 = it->first;
 						int k1 = k1k2 / K2;
 						int k2 = k1k2 % K2;
 						C[act_count] = -(c[k1k2] + rho * (msgl[k1] + msgr[k2] - sumrow[k1] - sumcol[k2] ))/A + it->second; // C = -B/A
+						if (C[act_count] > 0.0){
+							weight_b += C[act_count];
+						}
 					}
+					stats->weight_b += weight_b;
 					solve_simplex(act_set.size(), Y_new, C);
 					delete[] C;
 				}
@@ -1022,12 +1097,14 @@ class BiFactor : public Factor{
 			//fill_inside();
 			//update Y and message
 			act_count = 0;
+			
 			for (vector<pair<int, Float>>::iterator it = act_set.begin(); it != act_set.end(); it++, act_count++){
 				int k1k2 = it->first;
 				if (fabs(Y_new[act_count]) < nnz_tol){
 					Y_new[act_count] = 0.0;
 				}
 				Float delta_Y = Y_new[act_count] - it->second;
+				stats->delta_Y_l1 += fabs(delta_Y);
 				int k1 = k1k2 / K2, k2 = k1k2 % K2;
 				msgl[k1] += delta_Y; sumrow[k1] += delta_Y;
 				msgr[k2] += delta_Y; sumcol[k2] += delta_Y;
@@ -1063,19 +1140,39 @@ class BiFactor : public Factor{
 		//     \mu^{t+1} - \mu^t
 		//   = \msg^{t+1} - \msg^t
 		//   = eta * ( (\sum_j y[:][j]) - y[:])
+		Float lambda_t = 0.0;
 		inline void update_multipliers(){
 			stats->maintain_time -= get_current_time();
 			//update msgl, msgr
 			Float* y_l = l->y;
 			Float* y_r = r->y;
-			for (vector<int>::iterator it_l = ever_nnz_msg_l.begin(); it_l != ever_nnz_msg_l.end(); it_l++){
-				int k = *it_l;
-				msgl[k] += eta * (sumrow[k] - y_l[k]);
+			if (accelerate){
+				Float lambda_tplus = (1 + sqrt(1 + 4*lambda_t*lambda_t))/2.0;
+				Float gamma = (1 - lambda_t)/lambda_tplus;
+					
+				for (vector<int>::iterator it_l = ever_nnz_msg_l.begin(); it_l != ever_nnz_msg_l.end(); it_l++){
+					int k = *it_l;
+					msgl[k] += eta * (sumrow[k] - y_l[k])*(1.0-gamma) + gamma * (last_msg_hat_l[k]);
+					last_msg_hat_l[k] = (msgl[k] - last_msg_hat_l[k]*gamma)/(1.0-gamma);
+				}
+				for (vector<int>::iterator it_r = ever_nnz_msg_r.begin(); it_r != ever_nnz_msg_r.end(); it_r++){
+					int k = *it_r;
+					msgr[k] += eta * (sumcol[k] - y_r[k])*(1.0-gamma) + gamma * (last_msg_hat_r[k]);
+					last_msg_hat_r[k] = (msgr[k] - last_msg_hat_r[k]*gamma)/(1.0-gamma);
+				}
+				
+				lambda_t = lambda_tplus;
+			} else {
+				for (vector<int>::iterator it_l = ever_nnz_msg_l.begin(); it_l != ever_nnz_msg_l.end(); it_l++){
+					int k = *it_l;
+					msgl[k] += eta * (sumrow[k] - y_l[k]);
+				}
+				for (vector<int>::iterator it_r = ever_nnz_msg_r.begin(); it_r != ever_nnz_msg_r.end(); it_r++){
+					int k = *it_r;
+					msgr[k] += eta * (sumcol[k] - y_r[k]);
+				}
 			}
-			for (vector<int>::iterator it_r = ever_nnz_msg_r.begin(); it_r != ever_nnz_msg_r.end(); it_r++){
-				int k = *it_r;
-				msgr[k] += eta * (sumcol[k] - y_r[k]);
-			}
+			//msgr[best_k] += etar * (sumcol[best_k] - y_r[best_k]);
 
 			stats->maintain_time += get_current_time();
 		}
@@ -1103,6 +1200,7 @@ class BiFactor : public Factor{
 			return score;
 			*/
 			int k1k2 = l->recent_pred * K2 + r->recent_pred;
+			//cerr << "recent_pred=(" << l->recent_pred << "," << r->recent_pred << "), c=" << c[k1k2] << endl;
 			return c[k1k2];
 		}
 
@@ -1136,13 +1234,15 @@ class BiFactor : public Factor{
 			Float* y_r = r->y;
 			for (int k = 0; k < K1; k++){
 				Float inf = fabs(sumrow[k] - y_l[k]);
-				if (inf > p_inf)
-					p_inf = inf;
+				/*if (inf > p_inf)
+					p_inf = inf;*/
+				p_inf += inf;
 			}
 			for (int k = 0; k < K2; k++){
 				Float inf = fabs(sumcol[k] - y_r[k]);
-				if (inf > p_inf)
-					p_inf = inf;
+				/*if (inf > p_inf)
+					p_inf = inf;*/
+				p_inf += inf;
 			}
 			return p_inf;
 		}

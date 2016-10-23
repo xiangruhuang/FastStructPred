@@ -49,9 +49,9 @@ tsu-gm.h5:
 clownfish-small.h5:
 	wget http://hciweb2.iwr.uni-heidelberg.de/opengm/benchmarks/models/zip/color-seg-n.zip
 	unzip color-seg-n.zip
-	mv color-seg-n4/clownfish-small.h5 ./
-	rm -rf color-seg-n4/
-	rm -f color-seg-n.zip	
+	mv color-seg-n8/clownfish-small.h5 ./
+	rm -rf color-seg-n8/ color-seg-n4/
+	rm -f color-seg-n.zip
 
 
 modeldir=/scratch/cluster/xrhuang/model/multilabel/EurLex.model

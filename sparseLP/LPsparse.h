@@ -236,6 +236,55 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		delete[] index;
 	}
 
+	class Decoder{
+		public:
+			Instance* ins;
+			int* pred;
+			Decoder(Instance* _ins){
+				ins = _ins;
+				pred = new int[ins->T];
+			}
+			
+			~Decoder(){
+				delete pred;
+			}
+
+			Float decode(double* x){
+				//get integer prediction from variables(unigram factors)
+				int offset = 0;
+				Float score = 0.0;
+				for (int i = 0; i < ins->T; i++){
+					int K_i = ins->node_label_lists[i]->size();
+					Float max_x = -1e300;
+					for (int j = offset; j < offset + K_i; j++){
+						if (max_x < x[j]){
+							max_x = x[j];
+							pred[i] = j-offset;
+						}
+					}
+					score += ins->node_score_vecs[i][pred[i]];
+					offset += K_i;
+				}
+
+				int edge_count = 0;
+				for (vector<pair<int, int>>::iterator e = ins->edges.begin(); e != ins->edges.end(); e++, edge_count++){
+					int i = e->first, j = e->second;
+					int K1 = ins->node_label_lists[i]->size();
+					int K2 = ins->node_label_lists[j]->size();
+					int pred_e = pred[i]*K2 + pred[j];
+					score += ins->edge_score_vecs[edge_count]->c[pred_e];
+				}
+				/*string name = string("LPsparse.sol");
+				ofstream fout(name+to_string(iter));
+				fout << ins->T << endl;
+				for (int i = 0; i < ins->T; i++)
+					fout << pred[i] << " ";
+				fout << endl;
+				fout.close();*/
+				return score;
+			}
+		
+	};
 
 	/** Solve:
 	 *
@@ -244,7 +293,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 	 *       Aeq x = beq
 	 *       x >= 0
 	 */
-	void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, double* c, double*& x, double*& w, LP_Param* param){
+	void LPsolve(int n, int nf, int m, int me, Constr* A, ConstrInv* At, double* b, double* c, double*& x, double*& w, LP_Param* param, Decoder* decoder){
 
 		double eta_t = param->eta;
 		int max_iter = param->max_iter;
@@ -297,6 +346,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		int active_nnz = nnz_A;
 		int phase = 1, inner_iter;
 		double dinf_last=1e300, pinf_last=1e300, gap_last=1e300;
+		double best_decoded = -1e300;
 		for(int t=0;t<max_iter;t++){
 			if( phase == 1 ){
 				inner_max_iter = (active_nnz!=0)?(nnz_A/active_nnz):(n+nf);
@@ -326,8 +376,13 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 				dinf = dual_inf(n,nf,m,me,w,At,c,eta_t);
 				gap = duality_gap(n,nf,m,me,x,w,c,b,eta_t);
 
-				cerr << setprecision(7) << "iter=" << t << ", #inner=" << niter << ", obj=" << obj << ", eta=" << eta_t << ", time=" << ((double)get_current_time() + prediction_time);
+				//taking opposite since we want primal obj
+				Float decoded_t = -decoder->decode(x);
+				
+				best_decoded = max(decoded_t, best_decoded);
+				cerr << setprecision(7) << "iter=" << t << ", #inner=" << niter << ", relaxed-p-obj=" << (-obj) << ", decoded_t=" << decoded_t << ", best_decoded=" << best_decoded << ", eta=" << eta_t;
 				cerr << setprecision(2) << ", p_inf=" << pinf << ", d_inf=" << dinf << ", gap=" << fabs(gap/obj) << ", nnz=" << nnz << "(" << ((double)active_nnz/nnz_A) << ")" ;
+				cerr << ", time=" << ((double)get_current_time() + prediction_time);
 				cerr << endl;
 			}
 
@@ -407,6 +462,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		param->eta = eta_t;
 	}
 
+
 	//a template/wrapper used to cache shared parts of each sample, such as A & At
 	class LP_Problem{
 		public:
@@ -418,9 +474,11 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			double* b; 
 			Constr* At; //n+nf by m+me
 			double* c; 
-
+			
 			double* x;
 			double* y;
+			Decoder* decoder = NULL;	
+
 			LP_Param* param;
 
 			LP_Problem(){
@@ -434,7 +492,11 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			}
 
 			void solve(){
-				LPsolve(n, nf, m, me, A, At, b, c, x, y, param);
+				LPsolve(n, nf, m, me, A, At, b, c, x, y, param, decoder);
+			}
+
+			void multi_decode(double* x, int* decoded_x){
+				
 			}
 
 			~LP_Problem(){
@@ -455,7 +517,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		LP_Problem* ins_pred_prob = new LP_Problem(param);
 		int K = ins->node_label_lists[0]->size();
 		int M = K*(K-1)/2; //number of bigram factor
-		int m = 0, nf=0, n=K+M*4, me=2*M + M; //consistency + simplex
+		int m = 0, nf=0, n=K*2+M*4, me=3*M + 2*K; //consistency + simplex
 
 		ins_pred_prob->m = m;
 		ins_pred_prob->nf = nf;
@@ -469,7 +531,8 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		//unigram 
 		//cerr << "c:\t";
 		for(Int i=0;i<K;i++){
-			c[i] = ins->node_score_vecs[0][i];
+			c[i*2] = 0;
+			c[i*2+1] = ins->node_score_vecs[0][i];
 			//  cerr << c[i] << " ";
 		}
 		//cerr << endl;
@@ -485,12 +548,12 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 
 		//cerr << "|||| ";
 		//bigram
-		for(Int i=K;i<K+M*4;i++)
+		for(Int i=K*2;i<K*2+M*4;i++)
 			c[i] = 0.0;
 		int ij4=0;
 		for(Int i=0;i<K; i++){
 			for(Int j=i+1; j<K; j++, ij4+=4){
-				c[ K + ij4 + 3 ] = ins->edge_score_vecs[0]->c[i*K+j];
+				c[ K*2 + ij4 + 3 ] = ins->edge_score_vecs[0]->c[i*K+j];
 				//cerr << c[K+ij4+3] << " ";
 			}
 		}
@@ -507,9 +570,9 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 				  A[row].push_back(make_pair(j, 1.0)); //b00+b10=1-u1
 				  b[row++] = 1.0;
 				 */
-				A[row].push_back(make_pair((K+ij4+2*0+1*1), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
-				A[row].push_back(make_pair(j, -1.0)); //b01+b11=u1
+				A[row].push_back(make_pair((K*2+ij4+2*0+1*1), 1.0));
+				A[row].push_back(make_pair((K*2+ij4+2*1+1*1), 1.0));
+				A[row].push_back(make_pair(j*2+1, -1.0)); //b01+b11=u1
 				b[row++] = 0.0;
 				//left consistency
 				/*A[row].push_back(make_pair((K+ij4+2*0+1*0), 1.0));
@@ -517,9 +580,9 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 				  A[row].push_back(make_pair(i, 1.0)); //b00+b01=1-u1
 				  b[row++] = 1.0;
 				 */
-				A[row].push_back(make_pair((K+ij4+2*1+1*0), 1.0));
-				A[row].push_back(make_pair((K+ij4+2*1+1*1), 1.0));
-				A[row].push_back(make_pair(i, -1.0));//b10+b11=u1
+				A[row].push_back(make_pair((K*2+ij4+2*1+1*0), 1.0));
+				A[row].push_back(make_pair((K*2+ij4+2*1+1*1), 1.0));
+				A[row].push_back(make_pair(i*2+1, -1.0));//b10+b11=u1
 				b[row++] = 0.0;
 			}
 		}
@@ -529,9 +592,15 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			for(int j=i+1; j<K; j++, ij4+=4){
 
 				for(int d=0;d<4;d++)
-					A[row].push_back(make_pair((K+ij4+d), 1.0)); //simplex
+					A[row].push_back(make_pair((K*2+ij4+d), 1.0)); //simplex
 				b[row++] = 1.0;
 			}
+		}
+		for (int i = 0; i < K; i++){
+			for (int d = 0; d < 2; d++){
+				A[row].push_back(make_pair(i*2+d, 1.0));
+			}
+			b[row++] = 1.0;
 		}
 
 		assert( row == m+me );
@@ -555,6 +624,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			return construct_LP_multi(ins, param);
 		}
 		LP_Problem* ins_pred_prob = new LP_Problem(param);
+		ins_pred_prob->decoder = new Decoder(ins);
 		ins_pred_prob->param->eta = param->rho;
 		int T = ins->T;
 
@@ -607,7 +677,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 			int i = e->first, j = e->second;
 			//we are inside bigram factor (i,j), assume (i < j)
 			//assert(i < j && j < T /* node id should be in [T] */);
-			cerr << edge_count << "/" << ins->edges.size() << endl;
+			//cerr << edge_count << "/" << ins->edges.size() << endl;
 
 			//for each k1, alpha_i(k1) = \sum_{k2=0}^K beta_{(i,j)}(k1, k2)
 			int K1 = ins->node_label_lists[i]->size();
@@ -676,6 +746,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		//construct prediction problem for this instance
 		LP_Problem* ins_pred_prob = construct_LP(ins, param);
 
+
 		ins_pred_prob->solve();
 
 		double hit = 0.0;
@@ -739,6 +810,7 @@ void rcd(int n, int nf, int m, int me, ConstrInv* At, double* b, double* c, doub
 		vector<Instance*>* data = &(prob->data);
 		double N = 0.0;
 		double hit = 0.0;
+		cerr << "LPpredict: eta=" << prob->param->rho << endl;
 		for (int n = 0; n < data->size(); n++){
 			//if (n >= 10) continue;
 			cerr << "@" << n << ": ";

@@ -16,6 +16,7 @@ class Param{
 		int solver;
 		int max_iter;
 		Float eta, rho;
+		Float gamma;
 		string problem_type; // problem type
 		Float infea_tol; // tolerance of infeasibility
 		Float grad_tol; // stopping condition for gradient
@@ -30,6 +31,7 @@ class Param{
 			max_iter = 1000;
 			eta = 1.0;
 			rho = 1.0;
+			gamma = 1.0;
 			testFname = NULL;
 			modelFname = NULL;
 			problem_type = "NULL";
@@ -423,7 +425,7 @@ class LOGUAIProblem : public UAIProblem{
 					Float val;
 					fin >> val;
 					c[l] = -val;
-					if (val > 1e10 || val < -1e10){
+					if (val > 1e100 || val < -1e100){
 						//out liers
 						continue;
 					}
@@ -464,11 +466,7 @@ class LOGUAIProblem : public UAIProblem{
 			}
 			cerr << "done reading loguai file" << endl;
 
-			if (ins->largest - ins->smallest > 1e4){
-				ins->largest = 1.0;
-				ins->smallest = 0.0;
-			}
-
+			ins->smallest=0.0; ins->largest = 1.0;
 			ins->normalize();
 			//sort each ScoreVec after all values read
 			for (int i = 0; i < ins->edges.size(); i++){

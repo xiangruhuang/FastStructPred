@@ -1,11 +1,11 @@
 FLAG= -fopenmp -std=c++11 -O3 -w
-CC=g++#-4.8
+CC=g++-4.8
 
 all:
 	$(CC) $(FLAG) -o predict predict.cpp
 
-data_dir=/scratch/cluster/xrhuang/data/
-model_dir=/scratch/cluster/xrhuang/model/
+data_dir=/home/xiangru/Projects/MAP-sublinear/data/
+model_dir=/home/xiangru/Projects/MAP-sublinear/model/
 s=2
 m=100000
 q=1
@@ -15,7 +15,7 @@ opt=
 c=1
 t=0.1
 scale=test
-rho=1
+rho=0.01
 eta=1
 infea_tol=1e-3
 testno=1
@@ -35,12 +35,13 @@ clownfish:
 	./predict -p uai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
 
 107network:
-	$(eval test_file := $(data_dir)/107network/107network)
+	$(eval test_file := $(data_dir)/107network)
 	./predict -p network -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
+	#./predict -p network -s 2 $(test_file)
 
-107network.uai:
-	$(eval test_file := $(data_dir)/107network/107network.uai)
-	./predict -p uai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
+107network.loguai2:
+	$(eval test_file := $(data_dir)/$@)
+	./predict -p loguai -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file)
 
 pos:
 	$(eval test_file := $(data_dir)/POS/wsj.pos.crf.$(scale))
@@ -68,17 +69,25 @@ rcv1:
 	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
 
 EurLex: 
-	$(eval test_file := $(data_dir)/multilabel/Eur-Lex-Small.test)
-	$(eval model := $(model_dir)/multilabel/EurLex.model)
+	$(eval test_file := $(data_dir)/EurLex.subtest.1)
+	$(eval model := $(model_dir)/EurLex.model)
 	./predict $(opt) -p multilabel -s $(s) -o $(rho) -e $(eta) -m $(m) $(test_file) $(model)
 
 protein:
-	$(eval test_file := $(data_dir)/Protein/2BBN.uai)
+	$(eval test_file := $(data_dir)/2BBN.uai)
 	./predict $(opt) -p uai -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file)
 
 rcv1.uai:
 	$(eval test_file := $(data_dir)/multilabel/rcv1_regions.uai)
 	./predict $(opt) -p uai -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
+
+test.loguai2:
+	$(eval test_file := $(data_dir)/$@)
+	./predict $(opt) -p loguai -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file)
+
+clownfish-small.h5.loguai2:
+	$(eval test_file := $(data_dir)/$@)
+	./predict $(opt) -p loguai -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file)
 
 acro.uai:
 	$(eval test_file := $(data_dir)/acro.uai)
@@ -87,6 +96,14 @@ acro.uai:
 EurLex.uai:
 	$(eval test_file := $(data_dir)/multilabel/EurLex.uai)
 	./predict $(opt) -p uai -s $(s) -o $(rho) -e $(eta) -m $(m)  $(test_file) $(model)
+
+family-gm.h5.loguai2:
+	./predict -p loguai -s 2 -o $(rho) -e $(eta) -m $(m) $(data_dir)/photo-montage/$@
+
+test.uai:
+	$(eval uai_file := $(data_dir)/test.loguai2.h5.uai)
+	./predict -p loguai -s $(s) -o $(rho) -e $(eta) -m $(m) $(uai_file)	
+
 	
 #
 #speech:

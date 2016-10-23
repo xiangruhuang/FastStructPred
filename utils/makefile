@@ -1,7 +1,7 @@
 all: loguai_compress opengm2uai opengm2loguai multilabel2uai
 
 loguai_compress:
-	g++-4.8 -o loguai_compress loguai_compress.cpp -std=c++11 -O3
+	g++ -o loguai_compress loguai_compress.cpp -std=c++11 -O3
 
 opengm2uai:
 	#on server:
