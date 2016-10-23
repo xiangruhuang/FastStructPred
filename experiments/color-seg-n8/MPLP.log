@@ -1,0 +1,364 @@
+Time limit = 1e+08
+Random seed = 0
+niter=10000000
+niter_later=20
+nclus_to_add=5
+obj_del_thr=0.0002
+int_gap_thr=0.0002
+Calling Init() code...
+Reading model file
+Initializing...
+Initially running MPLP for 10000000 iterations
+int val: -17947.1
+Iter=1 Objective=-9573.33 Decoded=-17947.1 ObjDel=1e+40 IntGap=8373.79 Elapsed Time=10.3147
+int val: -14508.3
+Iter=2 Objective=-10699.1 Decoded=-14508.3 ObjDel=1125.72 IntGap=3809.24 Elapsed Time=14.0597
+int val: -13395.2
+Iter=3 Objective=-11130 Decoded=-13395.2 ObjDel=430.983 IntGap=2265.12 Elapsed Time=17.8486
+int val: -12873
+Iter=4 Objective=-11354.6 Decoded=-12873 ObjDel=224.552 IntGap=1518.36 Elapsed Time=21.4697
+int val: -12546.3
+Iter=5 Objective=-11490.2 Decoded=-12546.3 ObjDel=135.575 IntGap=1056.17 Elapsed Time=25.3474
+int val: -12351
+Iter=6 Objective=-11579.5 Decoded=-12351 ObjDel=89.3221 IntGap=771.508 Elapsed Time=29.2959
+int val: -12233.2
+Iter=7 Objective=-11641.9 Decoded=-12233.2 ObjDel=62.3775 IntGap=591.309 Elapsed Time=33.0359
+int val: -12154.5
+Iter=8 Objective=-11687.2 Decoded=-12154.5 ObjDel=45.2896 IntGap=467.299 Elapsed Time=36.5788
+int val: -12103.6
+Iter=9 Objective=-11720.4 Decoded=-12103.6 ObjDel=33.2829 IntGap=383.132 Elapsed Time=39.816
+int val: -12067.9
+Iter=10 Objective=-11745.4 Decoded=-12067.9 ObjDel=24.9847 IntGap=322.5 Elapsed Time=43.54
+int val: -12042.1
+Iter=11 Objective=-11764.5 Decoded=-12042.1 ObjDel=19.0836 IntGap=277.632 Elapsed Time=47.1108
+int val: -12019.4
+Iter=12 Objective=-11779.1 Decoded=-12019.4 ObjDel=14.6361 IntGap=240.272 Elapsed Time=50.4183
+int val: -12000.4
+Iter=13 Objective=-11790.5 Decoded=-12000.4 ObjDel=11.3336 IntGap=209.939 Elapsed Time=53.681
+int val: -11986.4
+Iter=14 Objective=-11799.4 Decoded=-11986.4 ObjDel=8.93435 IntGap=187.036 Elapsed Time=56.7309
+int val: -11976.8
+Iter=15 Objective=-11806.6 Decoded=-11976.8 ObjDel=7.16029 IntGap=170.221 Elapsed Time=60.086
+int val: -11966.5
+Iter=16 Objective=-11812.5 Decoded=-11966.5 ObjDel=5.89089 IntGap=154.075 Elapsed Time=63.6936
+int val: -11957.6
+Iter=17 Objective=-11817.4 Decoded=-11957.6 ObjDel=4.89875 IntGap=140.281 Elapsed Time=66.9949
+int val: -11951.2
+Iter=18 Objective=-11821.5 Decoded=-11951.2 ObjDel=4.1 IntGap=129.76 Elapsed Time=70.3239
+int val: -11943.2
+Iter=19 Objective=-11825 Decoded=-11943.2 ObjDel=3.5089 IntGap=118.278 Elapsed Time=73.662
+int val: -11937.7
+Iter=20 Objective=-11828 Decoded=-11937.7 ObjDel=3.01543 IntGap=109.726 Elapsed Time=76.9851
+int val: -11933.2
+Iter=21 Objective=-11830.6 Decoded=-11933.2 ObjDel=2.6106 IntGap=102.652 Elapsed Time=80.354
+int val: -11930
+Iter=22 Objective=-11832.9 Decoded=-11930 ObjDel=2.26617 IntGap=97.1265 Elapsed Time=83.6019
+int val: -11925.8
+Iter=23 Objective=-11834.8 Decoded=-11925.8 ObjDel=1.97933 IntGap=90.9428 Elapsed Time=86.8245
+int val: -11920.9
+Iter=24 Objective=-11836.6 Decoded=-11920.9 ObjDel=1.73181 IntGap=84.3227 Elapsed Time=90.4103
+int val: -11915.6
+Iter=25 Objective=-11838.1 Decoded=-11915.6 ObjDel=1.51869 IntGap=77.5543 Elapsed Time=94.132
+int val: -11912.3
+Iter=26 Objective=-11839.4 Decoded=-11912.3 ObjDel=1.33691 IntGap=72.8539 Elapsed Time=97.5034
+int val: -11909
+Iter=27 Objective=-11840.6 Decoded=-11909 ObjDel=1.17946 IntGap=68.4319 Elapsed Time=100.8
+int val: -11906.5
+Iter=28 Objective=-11841.6 Decoded=-11906.5 ObjDel=1.03871 IntGap=64.9041 Elapsed Time=104.162
+int val: -11901.5
+Iter=29 Objective=-11842.6 Decoded=-11901.5 ObjDel=0.923339 IntGap=58.9609 Elapsed Time=107.381
+int val: -11898.9
+Iter=30 Objective=-11843.4 Decoded=-11898.9 ObjDel=0.828155 IntGap=55.4912 Elapsed Time=111.052
+int val: -11896.8
+Iter=31 Objective=-11844.1 Decoded=-11896.8 ObjDel=0.74552 IntGap=52.6771 Elapsed Time=114.958
+int val: -11896.4
+Iter=32 Objective=-11844.8 Decoded=-11896.4 ObjDel=0.675695 IntGap=51.5644 Elapsed Time=118.824
+int val: -11894.2
+Iter=33 Objective=-11845.4 Decoded=-11894.2 ObjDel=0.614949 IntGap=48.7574 Elapsed Time=122.547
+int val: -11891.7
+Iter=34 Objective=-11846 Decoded=-11891.7 ObjDel=0.557942 IntGap=45.7007 Elapsed Time=126.195
+int val: -11890.5
+Iter=35 Objective=-11846.5 Decoded=-11890.5 ObjDel=0.510027 IntGap=44.0066 Elapsed Time=130.122
+int val: -11889
+Iter=36 Objective=-11847 Decoded=-11889 ObjDel=0.468238 IntGap=42.0215 Elapsed Time=134.045
+int val: -11885.9
+Iter=37 Objective=-11847.4 Decoded=-11885.9 ObjDel=0.426843 IntGap=38.5397 Elapsed Time=137.478
+int val: -11884.6
+Iter=38 Objective=-11847.8 Decoded=-11884.6 ObjDel=0.388731 IntGap=36.8621 Elapsed Time=140.887
+int val: -11882.9
+Iter=39 Objective=-11848.1 Decoded=-11882.9 ObjDel=0.353064 IntGap=34.7198 Elapsed Time=144.281
+int val: -11881.2
+Iter=40 Objective=-11848.5 Decoded=-11881.2 ObjDel=0.320137 IntGap=32.7023 Elapsed Time=147.676
+int val: -11879.7
+Iter=41 Objective=-11848.7 Decoded=-11879.7 ObjDel=0.291105 IntGap=30.9058 Elapsed Time=151.36
+int val: -11878.4
+Iter=42 Objective=-11849 Decoded=-11878.4 ObjDel=0.266847 IntGap=29.4169 Elapsed Time=154.571
+Iter=43 Objective=-11849.3 Decoded=-11878.4 ObjDel=0.245615 IntGap=29.1713 Elapsed Time=158.189
+Iter=44 Objective=-11849.5 Decoded=-11878.4 ObjDel=0.227519 IntGap=28.9438 Elapsed Time=161.978
+int val: -11878.4
+Iter=45 Objective=-11849.7 Decoded=-11878.4 ObjDel=0.209247 IntGap=28.7147 Elapsed Time=165.837
+int val: -11877.7
+Iter=46 Objective=-11849.9 Decoded=-11877.7 ObjDel=0.19277 IntGap=27.8097 Elapsed Time=169.694
+int val: -11876.2
+Iter=47 Objective=-11850.1 Decoded=-11876.2 ObjDel=0.178601 IntGap=26.1546 Elapsed Time=173.56
+int val: -11875.5
+Iter=48 Objective=-11850.2 Decoded=-11875.5 ObjDel=0.164997 IntGap=25.223 Elapsed Time=177.329
+int val: -11875.1
+Iter=49 Objective=-11850.4 Decoded=-11875.1 ObjDel=0.15415 IntGap=24.663 Elapsed Time=181.098
+int val: -11874.6
+Iter=50 Objective=-11850.5 Decoded=-11874.6 ObjDel=0.14259 IntGap=24.0503 Elapsed Time=184.686
+int val: -11873.9
+Iter=51 Objective=-11850.7 Decoded=-11873.9 ObjDel=0.133293 IntGap=23.2663 Elapsed Time=187.827
+int val: -11873.1
+Iter=52 Objective=-11850.8 Decoded=-11873.1 ObjDel=0.124523 IntGap=22.3446 Elapsed Time=191.341
+int val: -11872.5
+Iter=53 Objective=-11850.9 Decoded=-11872.5 ObjDel=0.11748 IntGap=21.5574 Elapsed Time=194.937
+int val: -11872.4
+Iter=54 Objective=-11851 Decoded=-11872.4 ObjDel=0.110051 IntGap=21.3968 Elapsed Time=198.207
+Iter=55 Objective=-11851.1 Decoded=-11872.4 ObjDel=0.103554 IntGap=21.2932 Elapsed Time=201.564
+int val: -11871.7
+Iter=56 Objective=-11851.2 Decoded=-11871.7 ObjDel=0.0977994 IntGap=20.4762 Elapsed Time=204.899
+int val: -11871.3
+Iter=57 Objective=-11851.3 Decoded=-11871.3 ObjDel=0.0911804 IntGap=19.962 Elapsed Time=207.995
+int val: -11870.2
+Iter=58 Objective=-11851.4 Decoded=-11870.2 ObjDel=0.0862602 IntGap=18.8521 Elapsed Time=211.07
+int val: -11869.4
+Iter=59 Objective=-11851.5 Decoded=-11869.4 ObjDel=0.0818833 IntGap=17.9526 Elapsed Time=214.327
+Iter=60 Objective=-11851.6 Decoded=-11869.4 ObjDel=0.0771031 IntGap=17.8755 Elapsed Time=217.369
+int val: -11868.8
+Iter=61 Objective=-11851.6 Decoded=-11868.8 ObjDel=0.071978 IntGap=17.1526 Elapsed Time=220.998
+int val: -11868.2
+Iter=62 Objective=-11851.7 Decoded=-11868.2 ObjDel=0.0675528 IntGap=16.4796 Elapsed Time=224.529
+int val: -11868
+Iter=63 Objective=-11851.8 Decoded=-11868 ObjDel=0.064113 IntGap=16.2861 Elapsed Time=227.956
+int val: -11867.8
+Iter=64 Objective=-11851.8 Decoded=-11867.8 ObjDel=0.0613792 IntGap=15.9803 Elapsed Time=231.63
+int val: -11867.2
+Iter=65 Objective=-11851.9 Decoded=-11867.2 ObjDel=0.0578344 IntGap=15.3617 Elapsed Time=234.903
+int val: -11866.8
+Iter=66 Objective=-11851.9 Decoded=-11866.8 ObjDel=0.0532342 IntGap=14.8947 Elapsed Time=238.543
+int val: -11866.2
+Iter=67 Objective=-11852 Decoded=-11866.2 ObjDel=0.0503441 IntGap=14.2342 Elapsed Time=242.221
+int val: -11865.7
+Iter=68 Objective=-11852 Decoded=-11865.7 ObjDel=0.0470604 IntGap=13.6512 Elapsed Time=246.08
+int val: -11865
+Iter=69 Objective=-11852.1 Decoded=-11865 ObjDel=0.0445176 IntGap=12.9034 Elapsed Time=249.469
+int val: -11864.3
+Iter=70 Objective=-11852.1 Decoded=-11864.3 ObjDel=0.0421312 IntGap=12.1438 Elapsed Time=253.318
+int val: -11863.9
+Iter=71 Objective=-11852.2 Decoded=-11863.9 ObjDel=0.0398321 IntGap=11.7676 Elapsed Time=257.116
+Iter=72 Objective=-11852.2 Decoded=-11863.9 ObjDel=0.0370488 IntGap=11.7306 Elapsed Time=261.062
+int val: -11863.7
+Iter=73 Objective=-11852.2 Decoded=-11863.7 ObjDel=0.0348915 IntGap=11.4798 Elapsed Time=265.158
+Iter=74 Objective=-11852.3 Decoded=-11863.7 ObjDel=0.0330606 IntGap=11.4467 Elapsed Time=269.054
+Iter=75 Objective=-11852.3 Decoded=-11863.7 ObjDel=0.0315881 IntGap=11.4151 Elapsed Time=273.017
+Iter=76 Objective=-11852.3 Decoded=-11863.7 ObjDel=0.029805 IntGap=11.3853 Elapsed Time=276.815
+Iter=77 Objective=-11852.3 Decoded=-11863.7 ObjDel=0.0286076 IntGap=11.3567 Elapsed Time=280.662
+int val: -11863.6
+Iter=78 Objective=-11852.4 Decoded=-11863.6 ObjDel=0.0275033 IntGap=11.2674 Elapsed Time=284.637
+int val: -11863.1
+Iter=79 Objective=-11852.4 Decoded=-11863.1 ObjDel=0.0263121 IntGap=10.6506 Elapsed Time=288.69
+int val: -11862.2
+Iter=80 Objective=-11852.4 Decoded=-11862.2 ObjDel=0.0252594 IntGap=9.79933 Elapsed Time=292.603
+int val: -11861.9
+Iter=81 Objective=-11852.5 Decoded=-11861.9 ObjDel=0.0239204 IntGap=9.49065 Elapsed Time=296.4
+int val: -11861.9
+Iter=82 Objective=-11852.5 Decoded=-11861.9 ObjDel=0.0225796 IntGap=9.41254 Elapsed Time=300.203
+int val: -11861.6
+Iter=83 Objective=-11852.5 Decoded=-11861.6 ObjDel=0.0215738 IntGap=9.11607 Elapsed Time=303.887
+int val: -11861.1
+Iter=84 Objective=-11852.5 Decoded=-11861.1 ObjDel=0.0205071 IntGap=8.56405 Elapsed Time=307.751
+int val: -11860.9
+Iter=85 Objective=-11852.5 Decoded=-11860.9 ObjDel=0.0195453 IntGap=8.31403 Elapsed Time=311.982
+int val: -11860.7
+Iter=86 Objective=-11852.6 Decoded=-11860.7 ObjDel=0.018313 IntGap=8.13137 Elapsed Time=315.711
+int val: -11860.6
+Iter=87 Objective=-11852.6 Decoded=-11860.6 ObjDel=0.0173608 IntGap=8.05934 Elapsed Time=319.447
+int val: -11860.2
+Iter=88 Objective=-11852.6 Decoded=-11860.2 ObjDel=0.0165356 IntGap=7.65493 Elapsed Time=323.191
+Iter=89 Objective=-11852.6 Decoded=-11860.2 ObjDel=0.0157168 IntGap=7.63921 Elapsed Time=326.725
+Iter=90 Objective=-11852.6 Decoded=-11860.2 ObjDel=0.0151118 IntGap=7.6241 Elapsed Time=330.897
+int val: -11859.8
+Iter=91 Objective=-11852.6 Decoded=-11859.8 ObjDel=0.0143949 IntGap=7.17979 Elapsed Time=334.65
+int val: -11859
+Iter=92 Objective=-11852.6 Decoded=-11859 ObjDel=0.0135389 IntGap=6.33263 Elapsed Time=338.854
+int val: -11858.6
+Iter=93 Objective=-11852.7 Decoded=-11858.6 ObjDel=0.0128863 IntGap=5.91173 Elapsed Time=342.822
+Iter=94 Objective=-11852.7 Decoded=-11858.6 ObjDel=0.0123217 IntGap=5.89941 Elapsed Time=346.724
+Iter=95 Objective=-11852.7 Decoded=-11858.6 ObjDel=0.0118727 IntGap=5.88754 Elapsed Time=350.442
+Iter=96 Objective=-11852.7 Decoded=-11858.6 ObjDel=0.0114179 IntGap=5.87612 Elapsed Time=354.09
+int val: -11858.2
+Iter=97 Objective=-11852.7 Decoded=-11858.2 ObjDel=0.0110423 IntGap=5.50667 Elapsed Time=357.998
+int val: -11858.1
+Iter=98 Objective=-11852.7 Decoded=-11858.1 ObjDel=0.0101333 IntGap=5.41818 Elapsed Time=361.746
+int val: -11858
+Iter=99 Objective=-11852.7 Decoded=-11858 ObjDel=0.00970477 IntGap=5.25164 Elapsed Time=365.206
+int val: -11857.9
+Iter=100 Objective=-11852.7 Decoded=-11857.9 ObjDel=0.00940664 IntGap=5.20791 Elapsed Time=368.796
+int val: -11857.7
+Iter=101 Objective=-11852.7 Decoded=-11857.7 ObjDel=0.00916091 IntGap=4.91579 Elapsed Time=372.61
+Iter=102 Objective=-11852.8 Decoded=-11857.7 ObjDel=0.00887413 IntGap=4.90692 Elapsed Time=376.325
+int val: -11857.6
+Iter=103 Objective=-11852.8 Decoded=-11857.6 ObjDel=0.00853473 IntGap=4.81934 Elapsed Time=380.002
+Iter=104 Objective=-11852.8 Decoded=-11857.6 ObjDel=0.00825168 IntGap=4.81108 Elapsed Time=383.318
+int val: -11857.5
+Iter=105 Objective=-11852.8 Decoded=-11857.5 ObjDel=0.0080102 IntGap=4.69572 Elapsed Time=386.723
+int val: -11857.3
+Iter=106 Objective=-11852.8 Decoded=-11857.3 ObjDel=0.00780693 IntGap=4.48364 Elapsed Time=390.991
+int val: -11857.2
+Iter=107 Objective=-11852.8 Decoded=-11857.2 ObjDel=0.00755463 IntGap=4.39564 Elapsed Time=394.811
+int val: -11856.6
+Iter=108 Objective=-11852.8 Decoded=-11856.6 ObjDel=0.00717058 IntGap=3.84077 Elapsed Time=398.644
+int val: -11856.5
+Iter=109 Objective=-11852.8 Decoded=-11856.5 ObjDel=0.00666091 IntGap=3.70986 Elapsed Time=402.515
+int val: -11856.3
+Iter=110 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00621347 IntGap=3.53361 Elapsed Time=406.396
+int val: -11856.3
+Iter=111 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.0059111 IntGap=3.49053 Elapsed Time=410.096
+Iter=112 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00577832 IntGap=3.48475 Elapsed Time=414.048
+Iter=113 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00565651 IntGap=3.47909 Elapsed Time=417.762
+int val: -11856.3
+Iter=114 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00555769 IntGap=3.46045 Elapsed Time=421.24
+Iter=115 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00547557 IntGap=3.45497 Elapsed Time=424.247
+Iter=116 Objective=-11852.8 Decoded=-11856.3 ObjDel=0.00539536 IntGap=3.44958 Elapsed Time=427.168
+int val: -11856.1
+Iter=117 Objective=-11852.9 Decoded=-11856.1 ObjDel=0.00528674 IntGap=3.21415 Elapsed Time=430.25
+int val: -11856
+Iter=118 Objective=-11852.9 Decoded=-11856 ObjDel=0.00519161 IntGap=3.16483 Elapsed Time=433.078
+int val: -11855.7
+Iter=119 Objective=-11852.9 Decoded=-11855.7 ObjDel=0.00509567 IntGap=2.80447 Elapsed Time=435.925
+int val: -11855.5
+Iter=120 Objective=-11852.9 Decoded=-11855.5 ObjDel=0.00498235 IntGap=2.61006 Elapsed Time=438.871
+int val: -11855.4
+Iter=121 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.0048899 IntGap=2.56601 Elapsed Time=441.783
+int val: -11855.4
+Iter=122 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00478967 IntGap=2.55183 Elapsed Time=444.681
+int val: -11855.4
+Iter=123 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.0046774 IntGap=2.49908 Elapsed Time=447.763
+Iter=124 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00457377 IntGap=2.4945 Elapsed Time=450.851
+Iter=125 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00446719 IntGap=2.49004 Elapsed Time=453.726
+Iter=126 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00437721 IntGap=2.48566 Elapsed Time=456.701
+Iter=127 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00427085 IntGap=2.48139 Elapsed Time=459.872
+Iter=128 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00410678 IntGap=2.47728 Elapsed Time=462.891
+Iter=129 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.0039532 IntGap=2.47333 Elapsed Time=465.92
+Iter=130 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00382149 IntGap=2.46951 Elapsed Time=468.909
+Iter=131 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00371987 IntGap=2.46579 Elapsed Time=471.826
+Iter=132 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00364212 IntGap=2.46215 Elapsed Time=474.758
+Iter=133 Objective=-11852.9 Decoded=-11855.4 ObjDel=0.00352647 IntGap=2.45862 Elapsed Time=477.688
+int val: -11855.1
+Iter=134 Objective=-11852.9 Decoded=-11855.1 ObjDel=0.00342459 IntGap=2.2111 Elapsed Time=480.66
+Iter=135 Objective=-11852.9 Decoded=-11855.1 ObjDel=0.00335688 IntGap=2.20775 Elapsed Time=483.592
+Iter=136 Objective=-11852.9 Decoded=-11855.1 ObjDel=0.00329969 IntGap=2.20445 Elapsed Time=486.456
+int val: -11855
+Iter=137 Objective=-11852.9 Decoded=-11855 ObjDel=0.00322639 IntGap=2.0682 Elapsed Time=489.35
+Iter=138 Objective=-11852.9 Decoded=-11855 ObjDel=0.00315368 IntGap=2.06505 Elapsed Time=492.394
+Iter=139 Objective=-11852.9 Decoded=-11855 ObjDel=0.00309668 IntGap=2.06195 Elapsed Time=495.33
+Iter=140 Objective=-11852.9 Decoded=-11855 ObjDel=0.0030433 IntGap=2.05891 Elapsed Time=498.207
+Iter=141 Objective=-11852.9 Decoded=-11855 ObjDel=0.00298792 IntGap=2.05592 Elapsed Time=501.111
+Iter=142 Objective=-11853 Decoded=-11855 ObjDel=0.00294396 IntGap=2.05298 Elapsed Time=504.08
+Iter=143 Objective=-11853 Decoded=-11855 ObjDel=0.00289388 IntGap=2.05008 Elapsed Time=506.836
+Iter=144 Objective=-11853 Decoded=-11855 ObjDel=0.00283826 IntGap=2.04724 Elapsed Time=509.688
+Iter=145 Objective=-11853 Decoded=-11855 ObjDel=0.00278871 IntGap=2.04445 Elapsed Time=512.55
+Iter=146 Objective=-11853 Decoded=-11855 ObjDel=0.00274358 IntGap=2.04171 Elapsed Time=515.665
+Iter=147 Objective=-11853 Decoded=-11855 ObjDel=0.00270333 IntGap=2.03901 Elapsed Time=518.442
+Iter=148 Objective=-11853 Decoded=-11855 ObjDel=0.00266426 IntGap=2.03634 Elapsed Time=521.374
+Iter=149 Objective=-11853 Decoded=-11855 ObjDel=0.00262697 IntGap=2.03372 Elapsed Time=524.326
+Iter=150 Objective=-11853 Decoded=-11855 ObjDel=0.00259053 IntGap=2.03113 Elapsed Time=527.209
+Iter=151 Objective=-11853 Decoded=-11855 ObjDel=0.00255028 IntGap=2.02858 Elapsed Time=529.965
+Iter=152 Objective=-11853 Decoded=-11855 ObjDel=0.00251493 IntGap=2.02606 Elapsed Time=532.841
+Iter=153 Objective=-11853 Decoded=-11855 ObjDel=0.00247945 IntGap=2.02358 Elapsed Time=535.726
+Iter=154 Objective=-11853 Decoded=-11855 ObjDel=0.00242196 IntGap=2.02116 Elapsed Time=538.615
+Iter=155 Objective=-11853 Decoded=-11855 ObjDel=0.00237291 IntGap=2.01879 Elapsed Time=541.624
+Iter=156 Objective=-11853 Decoded=-11855 ObjDel=0.00232733 IntGap=2.01646 Elapsed Time=544.532
+Iter=157 Objective=-11853 Decoded=-11855 ObjDel=0.00228108 IntGap=2.01418 Elapsed Time=547.501
+Iter=158 Objective=-11853 Decoded=-11855 ObjDel=0.00223899 IntGap=2.01194 Elapsed Time=550.544
+Iter=159 Objective=-11853 Decoded=-11855 ObjDel=0.00218992 IntGap=2.00975 Elapsed Time=553.493
+Iter=160 Objective=-11853 Decoded=-11855 ObjDel=0.0020789 IntGap=2.00767 Elapsed Time=556.548
+Iter=161 Objective=-11853 Decoded=-11855 ObjDel=0.0019844 IntGap=2.00569 Elapsed Time=559.55
+Iter=162 Objective=-11853 Decoded=-11855 ObjDel=0.00191068 IntGap=2.00378 Elapsed Time=562.29
+Iter=163 Objective=-11853 Decoded=-11855 ObjDel=0.00185838 IntGap=2.00192 Elapsed Time=565.245
+Iter=164 Objective=-11853 Decoded=-11855 ObjDel=0.00180376 IntGap=2.00011 Elapsed Time=568.22
+Iter=165 Objective=-11853 Decoded=-11855 ObjDel=0.00175358 IntGap=1.99836 Elapsed Time=571.048
+Iter=166 Objective=-11853 Decoded=-11855 ObjDel=0.00170631 IntGap=1.99665 Elapsed Time=573.965
+Iter=167 Objective=-11853 Decoded=-11855 ObjDel=0.00165548 IntGap=1.995 Elapsed Time=576.897
+Iter=168 Objective=-11853 Decoded=-11855 ObjDel=0.00162228 IntGap=1.99338 Elapsed Time=579.797
+Iter=169 Objective=-11853 Decoded=-11855 ObjDel=0.0015755 IntGap=1.9918 Elapsed Time=582.698
+Iter=170 Objective=-11853 Decoded=-11855 ObjDel=0.00152841 IntGap=1.99027 Elapsed Time=585.593
+int val: -11855
+Iter=171 Objective=-11853 Decoded=-11855 ObjDel=0.00148033 IntGap=1.96974 Elapsed Time=588.622
+int val: -11854.8
+Iter=172 Objective=-11853 Decoded=-11854.8 ObjDel=0.00143647 IntGap=1.75724 Elapsed Time=591.997
+int val: -11854.8
+Iter=173 Objective=-11853 Decoded=-11854.8 ObjDel=0.00139171 IntGap=1.73437 Elapsed Time=595.049
+Iter=174 Objective=-11853 Decoded=-11854.8 ObjDel=0.00127575 IntGap=1.7331 Elapsed Time=598.329
+int val: -11854.5
+Iter=175 Objective=-11853 Decoded=-11854.5 ObjDel=0.00117026 IntGap=1.4722 Elapsed Time=601.724
+Iter=176 Objective=-11853 Decoded=-11854.5 ObjDel=0.00112184 IntGap=1.47108 Elapsed Time=605.073
+Iter=177 Objective=-11853 Decoded=-11854.5 ObjDel=0.00109873 IntGap=1.46998 Elapsed Time=608.68
+int val: -11854.4
+Iter=178 Objective=-11853 Decoded=-11854.4 ObjDel=0.00107113 IntGap=1.41949 Elapsed Time=611.949
+Iter=179 Objective=-11853 Decoded=-11854.4 ObjDel=0.00101556 IntGap=1.41847 Elapsed Time=614.962
+Iter=180 Objective=-11853 Decoded=-11854.4 ObjDel=0.000917564 IntGap=1.41756 Elapsed Time=618.269
+Iter=181 Objective=-11853 Decoded=-11854.4 ObjDel=0.000807584 IntGap=1.41675 Elapsed Time=621.312
+int val: -11854.4
+Iter=182 Objective=-11853 Decoded=-11854.4 ObjDel=0.000731885 IntGap=1.369 Elapsed Time=624.621
+Iter=183 Objective=-11853 Decoded=-11854.4 ObjDel=0.000680247 IntGap=1.36831 Elapsed Time=627.808
+Iter=184 Objective=-11853 Decoded=-11854.4 ObjDel=0.000670541 IntGap=1.36764 Elapsed Time=631.302
+Iter=185 Objective=-11853 Decoded=-11854.4 ObjDel=0.000659551 IntGap=1.36698 Elapsed Time=634.707
+int val: -11854.3
+Iter=186 Objective=-11853 Decoded=-11854.3 ObjDel=0.000649065 IntGap=1.29722 Elapsed Time=638.243
+Iter=187 Objective=-11853 Decoded=-11854.3 ObjDel=0.000639553 IntGap=1.29658 Elapsed Time=641.821
+Iter=188 Objective=-11853 Decoded=-11854.3 ObjDel=0.000636061 IntGap=1.29595 Elapsed Time=645.365
+int val: -11854.2
+Iter=189 Objective=-11853 Decoded=-11854.2 ObjDel=0.00063186 IntGap=1.16735 Elapsed Time=648.501
+int val: -11854.2
+Iter=190 Objective=-11853 Decoded=-11854.2 ObjDel=0.000627584 IntGap=1.1435 Elapsed Time=651.524
+Iter=191 Objective=-11853 Decoded=-11854.2 ObjDel=0.00062322 IntGap=1.14288 Elapsed Time=654.38
+Iter=192 Objective=-11853 Decoded=-11854.2 ObjDel=0.000617617 IntGap=1.14226 Elapsed Time=657.376
+Iter=193 Objective=-11853 Decoded=-11854.2 ObjDel=0.000605182 IntGap=1.14165 Elapsed Time=660.677
+Iter=194 Objective=-11853 Decoded=-11854.2 ObjDel=0.000588641 IntGap=1.14106 Elapsed Time=663.813
+int val: -11854.1
+Iter=195 Objective=-11853 Decoded=-11854.1 ObjDel=0.000581093 IntGap=1.07273 Elapsed Time=666.656
+Iter=196 Objective=-11853 Decoded=-11854.1 ObjDel=0.000574067 IntGap=1.07216 Elapsed Time=669.936
+int val: -11853.9
+Iter=197 Objective=-11853 Decoded=-11853.9 ObjDel=0.000564031 IntGap=0.84568 Elapsed Time=673.188
+Iter=198 Objective=-11853 Decoded=-11853.9 ObjDel=0.00055831 IntGap=0.845122 Elapsed Time=676.307
+Iter=199 Objective=-11853 Decoded=-11853.9 ObjDel=0.000555164 IntGap=0.844567 Elapsed Time=679.371
+Iter=200 Objective=-11853 Decoded=-11853.9 ObjDel=0.000552118 IntGap=0.844014 Elapsed Time=682.694
+Iter=201 Objective=-11853 Decoded=-11853.9 ObjDel=0.000550208 IntGap=0.843464 Elapsed Time=685.961
+Iter=202 Objective=-11853 Decoded=-11853.9 ObjDel=0.000547374 IntGap=0.842917 Elapsed Time=689.039
+Iter=203 Objective=-11853 Decoded=-11853.9 ObjDel=0.000544846 IntGap=0.842372 Elapsed Time=692.08
+Iter=204 Objective=-11853 Decoded=-11853.9 ObjDel=0.000542408 IntGap=0.84183 Elapsed Time=695.244
+Iter=205 Objective=-11853 Decoded=-11853.9 ObjDel=0.000538437 IntGap=0.841291 Elapsed Time=698.74
+Iter=206 Objective=-11853 Decoded=-11853.9 ObjDel=0.000535488 IntGap=0.840756 Elapsed Time=701.929
+Iter=207 Objective=-11853 Decoded=-11853.9 ObjDel=0.000532356 IntGap=0.840223 Elapsed Time=705.032
+Iter=208 Objective=-11853 Decoded=-11853.9 ObjDel=0.000528149 IntGap=0.839695 Elapsed Time=708.296
+Iter=209 Objective=-11853 Decoded=-11853.9 ObjDel=0.00052312 IntGap=0.839172 Elapsed Time=711.5
+Iter=210 Objective=-11853 Decoded=-11853.9 ObjDel=0.000515194 IntGap=0.838657 Elapsed Time=714.733
+Iter=211 Objective=-11853 Decoded=-11853.9 ObjDel=0.000509573 IntGap=0.838147 Elapsed Time=718.148
+Iter=212 Objective=-11853 Decoded=-11853.9 ObjDel=0.000503635 IntGap=0.837644 Elapsed Time=721.372
+Iter=213 Objective=-11853 Decoded=-11853.9 ObjDel=0.000499703 IntGap=0.837144 Elapsed Time=724.34
+Iter=214 Objective=-11853 Decoded=-11853.9 ObjDel=0.00049655 IntGap=0.836647 Elapsed Time=727.557
+Iter=215 Objective=-11853 Decoded=-11853.9 ObjDel=0.000489907 IntGap=0.836157 Elapsed Time=730.774
+Iter=216 Objective=-11853 Decoded=-11853.9 ObjDel=0.000484345 IntGap=0.835673 Elapsed Time=734.015
+Iter=217 Objective=-11853 Decoded=-11853.9 ObjDel=0.000475712 IntGap=0.835197 Elapsed Time=737.429
+Iter=218 Objective=-11853 Decoded=-11853.9 ObjDel=0.000468923 IntGap=0.834728 Elapsed Time=740.734
+Iter=219 Objective=-11853 Decoded=-11853.9 ObjDel=0.000464022 IntGap=0.834264 Elapsed Time=743.889
+Iter=220 Objective=-11853 Decoded=-11853.9 ObjDel=0.000459415 IntGap=0.833805 Elapsed Time=747.44
+Iter=221 Objective=-11853.1 Decoded=-11853.9 ObjDel=0.000452902 IntGap=0.833352 Elapsed Time=750.705
+int val: -11853.8
+Iter=222 Objective=-11853.1 Decoded=-11853.8 ObjDel=0.000445494 IntGap=0.724896 Elapsed Time=753.916
+int val: -11853.5
+Iter=223 Objective=-11853.1 Decoded=-11853.5 ObjDel=0.000437478 IntGap=0.424946 Elapsed Time=757.28
+Iter=224 Objective=-11853.1 Decoded=-11853.5 ObjDel=0.000426348 IntGap=0.42452 Elapsed Time=760.725
+int val: -11853.5
+Iter=225 Objective=-11853.1 Decoded=-11853.5 ObjDel=0.000419345 IntGap=0.421365 Elapsed Time=763.866
+Iter=226 Objective=-11853.1 Decoded=-11853.5 ObjDel=0.000351875 IntGap=0.421014 Elapsed Time=767.36
+int val: -11853.4
+Iter=227 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.000259063 IntGap=0.376214 Elapsed Time=770.459
+Iter=228 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.00021943 IntGap=0.375994 Elapsed Time=774.035
+Iter=229 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.000207262 IntGap=0.375787 Elapsed Time=777.217
+Iter=230 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.000204483 IntGap=0.375582 Elapsed Time=780.558
+Iter=231 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.000201699 IntGap=0.375381 Elapsed Time=783.812
+Iter=232 Objective=-11853.1 Decoded=-11853.4 ObjDel=0.000199392 IntGap=0.375181 Elapsed Time=787.046
+break1

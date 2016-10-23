@@ -1,0 +1,4 @@
+TRWS  Tests ...
+loading .h5 file ../../../data//test.loguai2.h5................done
+best_value=29.9455, lower_bound=-29.9455, time=9e-06
+best_value=29.9455, lower_bound=-29.9455, time=3.6e-05

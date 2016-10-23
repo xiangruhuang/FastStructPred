@@ -1,0 +1,85 @@
+reading loguai file ../../../data//107network.loguai2
+#factors=731
+reading function tables.done reading loguai file
+normalizing #tables=86
+done normalizing
+prob.N=1
+prob.N=1
+param.rho=1
+param.eta=0
+#nodes=85, #edges=646
+largest=-0, smallest=-32, width=32
+best primal obj updated to 1678.27
+iter=0, funcval=3221.53, (-rel_score_t)=1711, decoded_t=1678.27, best_decoded=1678.27, dinf=99.7188, p_inf=1, countdown=0, uni_act_size=1034, area1=1035, area23=2068, area4=1.06916e+06, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0299225, uni_subsolve=0.00239291, bi_search=8.45817, bi_subsolve=26.677, maintain=0.0114309, construct=23.1734, overall time=67.2615
+largest=-0, smallest=-32, width=32
+iter=1, funcval=1259.02, (-rel_score_t)=989.595, decoded_t=-3.04e+302, best_decoded=1678.27, dinf=32.7965, p_inf=0.999579, countdown=0, uni_act_size=1034, area1=1036.97, area23=3345.29, area4=534578, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0316382, uni_subsolve=0.00582923, bi_search=8.50688, bi_subsolve=54.3432, maintain=0.0221253, construct=23.1734, overall time=103.451
+largest=-0, smallest=-32, width=32
+iter=2, funcval=1112.24, (-rel_score_t)=946.944, decoded_t=-3.04e+302, best_decoded=1678.27, dinf=2.5267, p_inf=0.938926, countdown=0, uni_act_size=1034, area1=1038.94, area23=4284.32, area4=356385, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0338948, uni_subsolve=0.0117196, bi_search=8.55041, bi_subsolve=89.9162, maintain=0.027513, construct=23.1734, overall time=148.283
+largest=-0, smallest=-32, width=32
+iter=3, funcval=1209.25, (-rel_score_t)=941.755, decoded_t=-2.84e+302, best_decoded=1678.27, dinf=46.0307, p_inf=1, countdown=0, uni_act_size=1034, area1=1040.31, area23=4883.49, area4=267289, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0367812, uni_subsolve=0.0189281, bi_search=8.58366, bi_subsolve=122.145, maintain=0.032273, construct=23.1734, overall time=188.12
+largest=-0, smallest=-32, width=32
+iter=4, funcval=1323.74, (-rel_score_t)=940.766, decoded_t=-2.44e+302, best_decoded=1678.27, dinf=55.9711, p_inf=1, countdown=0, uni_act_size=1034, area1=1041.28, area23=5293.57, area4=213831, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0384179, uni_subsolve=0.0221294, bi_search=8.61104, bi_subsolve=149.698, maintain=0.0351049, construct=23.1734, overall time=222.825
+largest=-0, smallest=-32, width=32
+iter=5, funcval=1206.42, (-rel_score_t)=929.238, decoded_t=-2.88e+302, best_decoded=1678.27, dinf=51.9207, p_inf=1, countdown=0, uni_act_size=1034, area1=1041.9, area23=5556.28, area4=178193, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0403018, uni_subsolve=0.0256016, bi_search=8.64361, bi_subsolve=177.877, maintain=0.0380907, construct=23.1734, overall time=258.527
+largest=-0, smallest=-32, width=32
+iter=6, funcval=1259.09, (-rel_score_t)=931.125, decoded_t=-2.64e+302, best_decoded=1678.27, dinf=57.946, p_inf=1, countdown=0, uni_act_size=1034, area1=1042.39, area23=5758.11, area4=152737, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0419759, uni_subsolve=0.0289498, bi_search=8.67286, bi_subsolve=205.811, maintain=0.0408486, construct=23.1734, overall time=294.229
+largest=-0, smallest=-32, width=32
+iter=7, funcval=1159.04, (-rel_score_t)=922.231, decoded_t=-2.92e+302, best_decoded=1678.27, dinf=17.9873, p_inf=0.999517, countdown=0, uni_act_size=1034, area1=1042.83, area23=5931.89, area4=133644, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0440843, uni_subsolve=0.0324624, bi_search=8.71406, bi_subsolve=234.934, maintain=0.044883, construct=23.1734, overall time=332.207
+largest=-0, smallest=-32, width=32
+iter=8, funcval=1389.38, (-rel_score_t)=920.05, decoded_t=-2.34e+302, best_decoded=1678.27, dinf=71.8477, p_inf=1, countdown=0, uni_act_size=1034, area1=1043.22, area23=6082.35, area4=118795, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0461245, uni_subsolve=0.035931, bi_search=8.75108, bi_subsolve=263.247, maintain=0.0485859, construct=23.1734, overall time=368.954
+largest=-0, smallest=-32, width=32
+iter=9, funcval=1266.77, (-rel_score_t)=918.564, decoded_t=-2.48e+302, best_decoded=1678.27, dinf=56.003, p_inf=1, countdown=0, uni_act_size=1034, area1=1043.52, area23=6197.28, area4=106916, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0481487, uni_subsolve=0.0394035, bi_search=8.79157, bi_subsolve=292.086, maintain=0.0518405, construct=23.1734, overall time=405.749
+largest=-0, smallest=-32, width=32
+iter=10, funcval=1170.01, (-rel_score_t)=911.706, decoded_t=-2.9e+302, best_decoded=1678.27, dinf=33.9452, p_inf=1, countdown=0, uni_act_size=1034, area1=1043.84, area23=6316.63, area4=97196, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0500034, uni_subsolve=0.0428524, bi_search=8.82912, bi_subsolve=320.431, maintain=0.0555895, construct=23.1734, overall time=441.949
+largest=-0, smallest=-32, width=32
+iter=11, funcval=1128.04, (-rel_score_t)=915.737, decoded_t=-2.88e+302, best_decoded=1678.27, dinf=27.9549, p_inf=0.999515, countdown=0, uni_act_size=1034, area1=1044.16, area23=6434.49, area4=89096.3, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0516885, uni_subsolve=0.0462621, bi_search=8.86877, bi_subsolve=348.965, maintain=0.059733, construct=23.1734, overall time=479.376
+largest=-0, smallest=-32, width=32
+iter=12, funcval=1147.15, (-rel_score_t)=918.106, decoded_t=-2.92e+302, best_decoded=1678.27, dinf=39.7728, p_inf=1, countdown=0, uni_act_size=1034, area1=1044.45, area23=6535.21, area4=82242.8, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.054395, uni_subsolve=0.0522667, bi_search=8.91852, bi_subsolve=384.399, maintain=0.0652215, construct=23.1734, overall time=525.526
+largest=-0, smallest=-32, width=32
+iter=13, funcval=1238.67, (-rel_score_t)=910.081, decoded_t=-2.6e+302, best_decoded=1678.27, dinf=56.0475, p_inf=1, countdown=0, uni_act_size=1034, area1=1044.66, area23=6615.36, area4=76368.3, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0567683, uni_subsolve=0.0587422, bi_search=8.96899, bi_subsolve=422.642, maintain=0.0698774, construct=23.1734, overall time=574.011
+largest=-0, smallest=-32, width=32
+iter=14, funcval=1211.13, (-rel_score_t)=908.301, decoded_t=-2.62e+302, best_decoded=1678.27, dinf=52.0289, p_inf=1, countdown=0, uni_act_size=1034, area1=1044.87, area23=6690.8, area4=71277.1, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0584853, uni_subsolve=0.0620937, bi_search=9.00244, bi_subsolve=450.639, maintain=0.0727537, construct=23.1734, overall time=609.473
+largest=-0, smallest=-32, width=32
+iter=15, funcval=1170.06, (-rel_score_t)=910.652, decoded_t=-2.8e+302, best_decoded=1678.27, dinf=65.9209, p_inf=1, countdown=0, uni_act_size=1034, area1=1045.1, area23=6770.82, area4=66822.2, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0601738, uni_subsolve=0.0654156, bi_search=9.03673, bi_subsolve=478.585, maintain=0.0756894, construct=23.1734, overall time=644.83
+largest=-0, smallest=-32, width=32
+iter=16, funcval=1189.01, (-rel_score_t)=910.663, decoded_t=-2.76e+302, best_decoded=1678.27, dinf=57.9349, p_inf=1, countdown=0, uni_act_size=1034, area1=1045.32, area23=6848.77, area4=62891.5, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0619133, uni_subsolve=0.0687791, bi_search=9.06922, bi_subsolve=506.541, maintain=0.0785421, construct=23.1734, overall time=679.976
+largest=-0, smallest=-32, width=32
+iter=17, funcval=1269.17, (-rel_score_t)=915.516, decoded_t=-2.48e+302, best_decoded=1678.27, dinf=71.7543, p_inf=1, countdown=0, uni_act_size=1034, area1=1045.55, area23=6921.97, area4=59397.6, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0634809, uni_subsolve=0.072014, bi_search=9.1085, bi_subsolve=534.986, maintain=0.0818782, construct=23.1734, overall time=716.003
+largest=-0, smallest=-32, width=32
+iter=18, funcval=1120.71, (-rel_score_t)=904.501, decoded_t=-2.92e+302, best_decoded=1678.27, dinf=19.8643, p_inf=0.999495, countdown=0, uni_act_size=1034, area1=1045.75, area23=6988.98, area4=56271.4, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0653466, uni_subsolve=0.0754062, bi_search=9.1442, bi_subsolve=562.901, maintain=0.0850844, construct=23.1734, overall time=751.668
+largest=-0, smallest=-32, width=32
+iter=19, funcval=1189.77, (-rel_score_t)=916.2, decoded_t=-2.78e+302, best_decoded=1678.27, dinf=27.9235, p_inf=1, countdown=0, uni_act_size=1034, area1=1045.94, area23=7050.25, area4=53457.8, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0676972, uni_subsolve=0.0788085, bi_search=9.18054, bi_subsolve=590.772, maintain=0.0882547, construct=23.1734, overall time=787.061
+largest=-0, smallest=-32, width=32
+iter=20, funcval=1218.06, (-rel_score_t)=903.365, decoded_t=-2.78e+302, best_decoded=1678.27, dinf=55.9849, p_inf=1, countdown=0, uni_act_size=1034, area1=1046.07, area23=7092.88, area4=50912.2, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0695061, uni_subsolve=0.0822554, bi_search=9.21631, bi_subsolve=618.71, maintain=0.0914222, construct=23.1734, overall time=822.614
+largest=-0, smallest=-32, width=32
+iter=21, funcval=1237.69, (-rel_score_t)=915.397, decoded_t=-2.58e+302, best_decoded=1678.27, dinf=73.8239, p_inf=0.999519, countdown=0, uni_act_size=1034, area1=1046.2, area23=7135.85, area4=48598, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0712669, uni_subsolve=0.0855549, bi_search=9.25127, bi_subsolve=646.57, maintain=0.0944867, construct=23.1734, overall time=858.008
+largest=-0, smallest=-32, width=32
+iter=22, funcval=1202.89, (-rel_score_t)=902.228, decoded_t=-2.68e+302, best_decoded=1678.27, dinf=51.8486, p_inf=1, countdown=0, uni_act_size=1034, area1=1046.35, area23=7183.72, area4=46485, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0730312, uni_subsolve=0.0889131, bi_search=9.28596, bi_subsolve=673.874, maintain=0.0976259, construct=23.1734, overall time=892.616
+largest=-0, smallest=-32, width=32
+iter=23, funcval=1173.54, (-rel_score_t)=902.17, decoded_t=-2.78e+302, best_decoded=1678.27, dinf=23.9936, p_inf=0.999562, countdown=0, uni_act_size=1034, area1=1046.52, area23=7236.4, area4=44548.2, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0746813, uni_subsolve=0.0922673, bi_search=9.32163, bi_subsolve=701.273, maintain=0.100749, construct=23.1734, overall time=927.506
+largest=-0, smallest=-32, width=32
+iter=24, funcval=1117, (-rel_score_t)=905.234, decoded_t=-2.94e+302, best_decoded=1678.27, dinf=11.9225, p_inf=0.999365, countdown=0, uni_act_size=1034, area1=1046.68, area23=7286.91, area4=42766.2, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0763295, uni_subsolve=0.0955941, bi_search=9.36251, bi_subsolve=731.826, maintain=0.104911, construct=23.1734, overall time=968.102
+largest=-0, smallest=-32, width=32
+iter=25, funcval=1107.23, (-rel_score_t)=899.237, decoded_t=-3.02e+302, best_decoded=1678.27, dinf=10.0921, p_inf=1, countdown=0, uni_act_size=1034, area1=1046.84, area23=7335.02, area4=41121.4, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0786696, uni_subsolve=0.102031, bi_search=9.41295, bi_subsolve=769.808, maintain=0.108507, construct=23.1734, overall time=1016.34
+largest=-0, smallest=-32, width=32
+iter=26, funcval=1101.75, (-rel_score_t)=904.211, decoded_t=-3e+302, best_decoded=1678.27, dinf=3.98739, p_inf=0.999514, countdown=0, uni_act_size=1034, area1=1046.98, area23=7382.29, area4=39598.4, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0813939, uni_subsolve=0.109096, bi_search=9.46461, bi_subsolve=807.659, maintain=0.112288, construct=23.1734, overall time=1064.65
+largest=-0, smallest=-32, width=32
+iter=27, funcval=1110.13, (-rel_score_t)=901.749, decoded_t=-3e+302, best_decoded=1678.27, dinf=11.9764, p_inf=0.999515, countdown=0, uni_act_size=1034, area1=1047.13, area23=7427.9, area4=38184.1, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.083658, uni_subsolve=0.115527, bi_search=9.51047, bi_subsolve=841.609, maintain=0.115264, construct=23.1734, overall time=1106.32
+largest=-0, smallest=-32, width=32
+iter=28, funcval=1251.16, (-rel_score_t)=908.667, decoded_t=-2.5e+302, best_decoded=1678.27, dinf=55.8041, p_inf=1, countdown=0, uni_act_size=1034, area1=1047.25, area23=7469.37, area4=36867.4, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0853999, uni_subsolve=0.118781, bi_search=9.54315, bi_subsolve=869.499, maintain=0.118075, construct=23.1734, overall time=1141.6
+largest=-0, smallest=-32, width=32
+iter=29, funcval=1227.87, (-rel_score_t)=905.26, decoded_t=-2.6e+302, best_decoded=1678.27, dinf=55.8784, p_inf=1, countdown=0, uni_act_size=1034, area1=1047.38, area23=7509.14, area4=35638.5, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0870963, uni_subsolve=0.122101, bi_search=9.57843, bi_subsolve=897.421, maintain=0.121044, construct=23.1734, overall time=1176.95
+largest=-0, smallest=-32, width=32
+iter=30, funcval=1210.65, (-rel_score_t)=900.047, decoded_t=-2.58e+302, best_decoded=1678.27, dinf=59.7794, p_inf=1, countdown=0, uni_act_size=1034, area1=1047.52, area23=7551.41, area4=34488.9, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0888281, uni_subsolve=0.125446, bi_search=9.61217, bi_subsolve=925.329, maintain=0.123871, construct=23.1734, overall time=1212.37
+largest=-0, smallest=-32, width=32
+iter=31, funcval=1210.66, (-rel_score_t)=900.943, decoded_t=-2.68e+302, best_decoded=1678.27, dinf=47.886, p_inf=1, countdown=0, uni_act_size=1034, area1=1047.66, area23=7593.34, area4=33411.1, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0904876, uni_subsolve=0.12881, bi_search=9.64784, bi_subsolve=953.21, maintain=0.126807, construct=23.1734, overall time=1247.58
+largest=-0, smallest=-32, width=32
+iter=32, funcval=1139.73, (-rel_score_t)=901.796, decoded_t=-2.88e+302, best_decoded=1678.27, dinf=24.0471, p_inf=1, countdown=0, uni_act_size=1034, area1=1047.8, area23=7636.6, area4=32398.7, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.092253, uni_subsolve=0.132242, bi_search=9.68326, bi_subsolve=981.046, maintain=0.129724, construct=23.1734, overall time=1282.87
+largest=-0, smallest=-32, width=32
+iter=33, funcval=1097.53, (-rel_score_t)=897.494, decoded_t=-2.92e+302, best_decoded=1678.27, dinf=11.9342, p_inf=0.992147, countdown=0, uni_act_size=1034, area1=1047.94, area23=7676.29, area4=31445.8, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0939155, uni_subsolve=0.135596, bi_search=9.71829, bi_subsolve=1008.93, maintain=0.132442, construct=23.1734, overall time=1318.07
+largest=-0, smallest=-32, width=32
+iter=34, funcval=1137.22, (-rel_score_t)=901.069, decoded_t=-2.84e+302, best_decoded=1678.27, dinf=25.9326, p_inf=1, countdown=0, uni_act_size=1034, area1=1048.07, area23=7716.27, area4=30547.3, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0958301, uni_subsolve=0.139061, bi_search=9.7543, bi_subsolve=1036.89, maintain=0.135392, construct=23.1734, overall time=1353.49
+largest=-0, smallest=-32, width=32
+iter=35, funcval=1162.71, (-rel_score_t)=897.602, decoded_t=-2.78e+302, best_decoded=1678.27, dinf=27.9887, p_inf=1, countdown=0, uni_act_size=1034, area1=1048.2, area23=7755.18, area4=29698.8, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.097466, uni_subsolve=0.142399, bi_search=9.78936, bi_subsolve=1064.77, maintain=0.138131, construct=23.1734, overall time=1388.64
+largest=-0, smallest=-32, width=32
+iter=36, funcval=1167.43, (-rel_score_t)=901.961, decoded_t=-2.76e+302, best_decoded=1678.27, dinf=47.9631, p_inf=1, countdown=0, uni_act_size=1034, area1=1048.33, area23=7792.51, area4=28896.1, bi_act_size=1.06916e+06, bi_ever_nnz_msg=1034, uni_search=0.0990926, uni_subsolve=0.14568, bi_search=9.8265, bi_subsolve=1092.49, maintain=0.141173, construct=23.1734, overall time=1423.79

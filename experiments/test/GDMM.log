@@ -1,0 +1,79 @@
+reading loguai file ../../../data//test.loguai2
+#factors=14
+reading function tables.done reading loguai file
+normalizing #tables=6
+done normalizing
+prob.N=1
+prob.N=1
+param.rho=0.01
+param.eta=1
+#nodes=5, #edges=9
+largest=2.68004, smallest=-3.27835, width=5.95839
+best primal obj updated to 11.6935
+iter=0, funcval=2.32327, (-rel_score_t)=39.204, decoded_t=11.6935, best_decoded=11.6935, dinf=0, p_inf=30, countdown=0, delta_Y_l1 per factor=1.92857, weight_b=0.107143, uni_act_size=1, area1=1, area23=2, area4=0.333333, bi_act_size=2, bi_ever_nnz_msg=1.66667, uni_search=3.63193e-06, uni_subsolve=7.4727e-06, bi_search=7.0543e-06, bi_subsolve=9.079e-06, maintain=5.09922e-06, construct=1.44569e-05, overall time=0.000896135
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=1, funcval=3.57465, (-rel_score_t)=38.9423, decoded_t=11.6935, best_decoded=11.6935, dinf=0.0262514, p_inf=30.0156, countdown=0, delta_Y_l1 per factor=0.418576, weight_b=0.428412, uni_act_size=1.5, area1=4.5, area23=3.11111, area4=0.722222, bi_act_size=2, bi_ever_nnz_msg=2.16667, uni_search=7.26385e-06, uni_subsolve=1.53645e-05, bi_search=1.62048e-05, bi_subsolve=1.66895e-05, maintain=1.01961e-05, construct=1.44569e-05, overall time=0.00102283
+largest=2.68004, smallest=-3.27835, width=5.95839
+best primal obj updated to 12.718
+iter=2, funcval=4.98627, (-rel_score_t)=38.4455, decoded_t=12.718, best_decoded=12.718, dinf=0.0435502, p_inf=29.9636, countdown=0, delta_Y_l1 per factor=0.687357, weight_b=0.145249, uni_act_size=1.66667, area1=5.66667, area23=3.51852, area4=0.481481, bi_act_size=2.22222, bi_ever_nnz_msg=2.33333, uni_search=1.08981e-05, uni_subsolve=1.96255e-05, bi_search=2.44458e-05, bi_subsolve=2.44416e-05, maintain=1.52262e-05, construct=1.44569e-05, overall time=0.00115622
+largest=2.68004, smallest=-3.27835, width=5.95839
+best primal obj updated to 12.9562
+iter=3, funcval=6.29649, (-rel_score_t)=37.8887, decoded_t=12.9562, best_decoded=12.9562, dinf=0.0348482, p_inf=26.8853, countdown=0, delta_Y_l1 per factor=0.319836, weight_b=0.0763715, uni_act_size=1.8, area1=6.75, area23=3.94444, area4=0.361111, bi_act_size=2.61111, bi_ever_nnz_msg=2.5, uni_search=1.5018e-05, uni_subsolve=2.50034e-05, bi_search=3.56219e-05, bi_subsolve=3.6245e-05, maintain=2.04642e-05, construct=1.44569e-05, overall time=0.00131993
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=4, funcval=7.17074, (-rel_score_t)=36.9392, decoded_t=11.0132, best_decoded=12.9562, dinf=0.0334439, p_inf=23.3194, countdown=0, delta_Y_l1 per factor=0.710112, weight_b=0.0415569, uni_act_size=1.96, area1=8.26667, area23=4.57778, area4=0.488889, bi_act_size=3, bi_ever_nnz_msg=2.77778, uni_search=1.89992e-05, uni_subsolve=3.26866e-05, bi_search=5.09876e-05, bi_subsolve=4.91652e-05, maintain=2.59806e-05, construct=1.44569e-05, overall time=0.0015011
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=5, funcval=7.86193, (-rel_score_t)=36.0932, decoded_t=11.0132, best_decoded=12.9562, dinf=0.032463, p_inf=20.0976, countdown=0, delta_Y_l1 per factor=0.791232, weight_b=0.022699, uni_act_size=2.13333, area1=9.72222, area23=5.25926, area4=0.407407, bi_act_size=3.35185, bi_ever_nnz_msg=3.05556, uni_search=2.30505e-05, uni_subsolve=4.01605e-05, bi_search=6.75397e-05, bi_subsolve=6.25039e-05, maintain=3.14983e-05, construct=1.44569e-05, overall time=0.00168429
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=6, funcval=8.75097, (-rel_score_t)=35.7388, decoded_t=10.0155, best_decoded=12.9562, dinf=0.0309765, p_inf=19.069, countdown=0, delta_Y_l1 per factor=0.482185, weight_b=0.0181609, uni_act_size=2.22857, area1=11.0159, area23=6.04762, area4=0.380952, bi_act_size=3.65079, bi_ever_nnz_msg=3.28571, uni_search=2.73802e-05, uni_subsolve=5.04265e-05, bi_search=8.61175e-05, bi_subsolve=7.53528e-05, maintain=3.6875e-05, construct=1.44569e-05, overall time=0.00187328
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=7, funcval=9.67654, (-rel_score_t)=35.364, decoded_t=11.3971, best_decoded=12.9562, dinf=0.0306068, p_inf=19.1659, countdown=0, delta_Y_l1 per factor=0.398228, weight_b=0.0142258, uni_act_size=2.3, area1=11.9861, area23=6.73611, area4=0.333333, bi_act_size=3.86111, bi_ever_nnz_msg=3.47222, uni_search=3.15001e-05, uni_subsolve=5.70614e-05, bi_search=0.000101412, bi_subsolve=8.86228e-05, maintain=4.22527e-05, construct=1.44569e-05, overall time=0.00208434
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=8, funcval=10.6992, (-rel_score_t)=35.1395, decoded_t=11.3971, best_decoded=12.9562, dinf=0.0214347, p_inf=19.8506, countdown=0, delta_Y_l1 per factor=0.230684, weight_b=0.00711523, uni_act_size=2.37778, area1=12.8642, area23=7.33333, area4=0.320988, bi_act_size=4.11111, bi_ever_nnz_msg=3.66667, uni_search=3.56201e-05, uni_subsolve=6.39043e-05, bi_search=0.00011943, bi_subsolve=0.000101962, maintain=4.75608e-05, construct=1.44569e-05, overall time=0.00226572
+largest=2.68004, smallest=-3.27835, width=5.95839
+best primal obj updated to 16.0558
+iter=9, funcval=11.3621, (-rel_score_t)=34.2807, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0329847, p_inf=16.5087, countdown=0, delta_Y_l1 per factor=0.72335, weight_b=0.0061332, uni_act_size=2.48, area1=13.5667, area23=7.84444, area4=0.333333, bi_act_size=4.41111, bi_ever_nnz_msg=3.82222, uni_search=3.9601e-05, uni_subsolve=7.10282e-05, bi_search=0.000136331, bi_subsolve=0.000115094, maintain=5.30779e-05, construct=1.44569e-05, overall time=0.00243376
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=10, funcval=12.0783, (-rel_score_t)=34.0322, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0205195, p_inf=15.2107, countdown=0, delta_Y_l1 per factor=0.442918, weight_b=0.00556897, uni_act_size=2.56364, area1=14.1414, area23=8.27273, area4=0.30303, bi_act_size=4.68687, bi_ever_nnz_msg=3.94949, uni_search=4.31626e-05, uni_subsolve=7.69638e-05, bi_search=0.000148344, bi_subsolve=0.00012578, maintain=5.8247e-05, construct=1.44569e-05, overall time=0.00258566
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=11, funcval=12.9303, (-rel_score_t)=34.0202, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0159025, p_inf=15.0717, countdown=0, delta_Y_l1 per factor=0.335405, weight_b=0.00368305, uni_act_size=2.65, area1=14.6296, area23=8.61111, area4=0.277778, bi_act_size=4.91667, bi_ever_nnz_msg=4.05556, uni_search=4.70746e-05, uni_subsolve=8.38076e-05, bi_search=0.000163851, bi_subsolve=0.00013982, maintain=6.50913e-05, construct=1.44569e-05, overall time=0.00276369
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=12, funcval=13.9093, (-rel_score_t)=33.9814, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0137124, p_inf=15.7803, countdown=0, delta_Y_l1 per factor=0.32853, weight_b=0, uni_act_size=2.66154, area1=15.0342, area23=8.94872, area4=0.25641, bi_act_size=5.09402, bi_ever_nnz_msg=4.1453, uni_search=5.11245e-05, uni_subsolve=9.07907e-05, bi_search=0.000178937, bi_subsolve=0.000153231, maintain=7.09582e-05, construct=1.44569e-05, overall time=0.00294367
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=13, funcval=14.9084, (-rel_score_t)=33.7682, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0359994, p_inf=15.0607, countdown=0, delta_Y_l1 per factor=0.27865, weight_b=0, uni_act_size=2.68571, area1=15.3968, area23=9.24603, area4=0.238095, bi_act_size=5.2619, bi_ever_nnz_msg=4.24603, uni_search=5.50344e-05, uni_subsolve=9.75644e-05, bi_search=0.000196957, bi_subsolve=0.000167408, maintain=7.71743e-05, construct=1.44569e-05, overall time=0.00312645
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=14, funcval=15.6803, (-rel_score_t)=33.1812, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0278021, p_inf=12.9213, countdown=0, delta_Y_l1 per factor=0.384561, weight_b=0, uni_act_size=2.73333, area1=15.7111, area23=9.51852, area4=0.222222, bi_act_size=5.41481, bi_ever_nnz_msg=4.33333, uni_search=5.92256e-05, uni_subsolve=0.00010413, bi_search=0.000212322, bi_subsolve=0.000180468, maintain=8.42987e-05, construct=1.44569e-05, overall time=0.00329036
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=15, funcval=16.304, (-rel_score_t)=32.6768, decoded_t=16.0558, best_decoded=16.0558, dinf=0.0252498, p_inf=11.2153, countdown=0, delta_Y_l1 per factor=0.482473, weight_b=0, uni_act_size=2.8, area1=16.0139, area23=9.78472, area4=0.208333, bi_act_size=5.54167, bi_ever_nnz_msg=4.41667, uni_search=6.26489e-05, uni_subsolve=0.000109997, bi_search=0.000226291, bi_subsolve=0.000191293, maintain=8.94675e-05, construct=1.44569e-05, overall time=0.00343067
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=16, funcval=17.0525, (-rel_score_t)=32.648, decoded_t=14.4879, best_decoded=16.0558, dinf=0.0321732, p_inf=10.5719, countdown=0, delta_Y_l1 per factor=0.379252, weight_b=0, uni_act_size=2.87059, area1=16.281, area23=10.0131, area4=0.196078, bi_act_size=5.66667, bi_ever_nnz_msg=4.4902, uni_search=6.6279e-05, uni_subsolve=0.000115374, bi_search=0.000238304, bi_subsolve=0.000201771, maintain=9.45665e-05, construct=1.44569e-05, overall time=0.00356184
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=17, funcval=17.8035, (-rel_score_t)=32.5584, decoded_t=14.4879, best_decoded=16.0558, dinf=0.0292319, p_inf=10.4636, countdown=0, delta_Y_l1 per factor=0.455628, weight_b=0, uni_act_size=2.91111, area1=16.5185, area23=10.2222, area4=0.185185, bi_act_size=5.7716, bi_ever_nnz_msg=4.55556, uni_search=6.9563e-05, uni_subsolve=0.000120403, bi_search=0.00024934, bi_subsolve=0.000212597, maintain=9.98054e-05, construct=1.44569e-05, overall time=0.00369076
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=18, funcval=18.4819, (-rel_score_t)=32.3554, decoded_t=14.4879, best_decoded=16.0558, dinf=0.0334537, p_inf=11.1139, countdown=0, delta_Y_l1 per factor=0.499573, weight_b=0, uni_act_size=2.95789, area1=16.731, area23=10.4094, area4=0.175439, bi_act_size=5.88304, bi_ever_nnz_msg=4.62573, uni_search=7.30543e-05, uni_subsolve=0.000125222, bi_search=0.000260306, bi_subsolve=0.000223771, maintain=0.000104973, construct=1.44569e-05, overall time=0.0038199
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=19, funcval=19.198, (-rel_score_t)=32.3135, decoded_t=14.4879, best_decoded=16.0558, dinf=0.0213465, p_inf=11.0678, countdown=0, delta_Y_l1 per factor=0.390877, weight_b=0, uni_act_size=3.01, area1=16.9833, area23=10.6444, area4=0.2, bi_act_size=6.00556, bi_ever_nnz_msg=4.7, uni_search=7.65463e-05, uni_subsolve=0.000130461, bi_search=0.000274552, bi_subsolve=0.000234597, maintain=0.000110212, construct=1.44569e-05, overall time=0.00395225
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=20, funcval=19.914, (-rel_score_t)=32.2253, decoded_t=14.4879, best_decoded=16.0558, dinf=0.029516, p_inf=10.7225, countdown=0, delta_Y_l1 per factor=0.387149, weight_b=0, uni_act_size=3.06667, area1=17.2116, area23=10.8571, area4=0.190476, bi_act_size=6.12698, bi_ever_nnz_msg=4.7672, uni_search=8.00383e-05, uni_subsolve=0.000135629, bi_search=0.000286286, bi_subsolve=0.00024542, maintain=0.000115451, construct=1.44569e-05, overall time=0.00408222
+largest=2.68004, smallest=-3.27835, width=5.95839
+best primal obj updated to 29.9455
+iter=21, funcval=19.9675, (-rel_score_t)=30.8785, decoded_t=29.9455, best_decoded=29.9455, dinf=0.0210254, p_inf=6.92388, countdown=0, delta_Y_l1 per factor=0.58496, weight_b=0, uni_act_size=3.13636, area1=17.4192, area23=11.0505, area4=0.181818, bi_act_size=6.21717, bi_ever_nnz_msg=4.82828, uni_search=8.34612e-05, uni_subsolve=0.000140868, bi_search=0.000298088, bi_subsolve=0.000257083, maintain=0.000120621, construct=1.44569e-05, overall time=0.00421681
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=22, funcval=20.0414, (-rel_score_t)=30.4356, decoded_t=29.9455, best_decoded=29.9455, dinf=0.0140847, p_inf=4.78478, countdown=0, delta_Y_l1 per factor=0.356338, weight_b=0, uni_act_size=3.13913, area1=17.6377, area23=11.2464, area4=0.173913, bi_act_size=6.28502, bi_ever_nnz_msg=4.89372, uni_search=8.68842e-05, uni_subsolve=0.000146665, bi_search=0.000311358, bi_subsolve=0.000268188, maintain=0.00012593, construct=1.44569e-05, overall time=0.00437332
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=23, funcval=20.0881, (-rel_score_t)=30.2186, decoded_t=29.9455, best_decoded=29.9455, dinf=0.00977714, p_inf=1.92984, countdown=0, delta_Y_l1 per factor=0.243392, weight_b=0.00469986, uni_act_size=3.14167, area1=17.838, area23=11.4213, area4=0.166667, bi_act_size=6.30093, bi_ever_nnz_msg=4.9537, uni_search=9.07956e-05, uni_subsolve=0.000152671, bi_search=0.000325396, bi_subsolve=0.000280828, maintain=0.000131447, construct=1.44569e-05, overall time=0.00454003
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=24, funcval=20.0684, (-rel_score_t)=29.992, decoded_t=29.9455, best_decoded=29.9455, dinf=0.0108943, p_inf=0.335289, countdown=0, delta_Y_l1 per factor=0.147911, weight_b=0.00467534, uni_act_size=3.08, area1=18.0222, area23=11.5822, area4=0.16, bi_act_size=6.25778, bi_ever_nnz_msg=5.00889, uni_search=9.64524e-05, uni_subsolve=0.000159516, bi_search=0.000339995, bi_subsolve=0.000293262, maintain=0.000136895, construct=1.44569e-05, overall time=0.00470814
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=25, funcval=20.0672, (-rel_score_t)=29.9564, decoded_t=29.9455, best_decoded=29.9455, dinf=3.56376e-06, p_inf=0.0343975, countdown=0, delta_Y_l1 per factor=0.0200446, weight_b=0.00467534, uni_act_size=3.00769, area1=18.1923, area23=11.7393, area4=0.153846, bi_act_size=6.20085, bi_ever_nnz_msg=5.05983, uni_search=0.000100293, uni_subsolve=0.000165034, bi_search=0.000353613, bi_subsolve=0.000303319, maintain=0.000142342, construct=1.44569e-05, overall time=0.00486766
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=26, funcval=20.0654, (-rel_score_t)=29.9455, decoded_t=29.9455, best_decoded=29.9455, dinf=1.55431e-15, p_inf=2.20379e-14, countdown=1, delta_Y_l1 per factor=0.00245697, weight_b=0.00467534, uni_act_size=2.93333, area1=18.3498, area23=11.8848, area4=0.148148, bi_act_size=6.14815, bi_ever_nnz_msg=5.107, uni_search=0.000104064, uni_subsolve=0.000169713, bi_search=0.000366397, bi_subsolve=0.000312887, maintain=0.000147788, construct=1.44569e-05, overall time=0.00502389
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=27, funcval=20.0654, (-rel_score_t)=29.9455, decoded_t=29.9455, best_decoded=29.9455, dinf=1.38778e-17, p_inf=1.04916e-14, countdown=2, delta_Y_l1 per factor=1.05868e-15, weight_b=0.00467534, uni_act_size=2.86429, area1=18.496, area23=12.0198, area4=0.142857, bi_act_size=6.09921, bi_ever_nnz_msg=5.15079, uni_search=0.000107976, uni_subsolve=0.000174672, bi_search=0.000381133, bi_subsolve=0.000323156, maintain=0.000153166, construct=1.44569e-05, overall time=0.00518718
+largest=2.68004, smallest=-3.27835, width=5.95839
+iter=28, funcval=20.0654, (-rel_score_t)=29.9455, decoded_t=29.9455, best_decoded=29.9455, dinf=1.38778e-17, p_inf=1.04916e-14, countdown=3, delta_Y_l1 per factor=3.56857e-17, weight_b=0.00467534, uni_act_size=2.8, area1=18.6322, area23=12.1456, area4=0.137931, bi_act_size=6.05364, bi_ever_nnz_msg=5.19157, uni_search=0.000111887, uni_subsolve=0.000179071, bi_search=0.000394541, bi_subsolve=0.000333143, maintain=0.000158613, construct=1.44569e-05, overall time=0.00534907
+@0: iter=29, T=5, acc=0, score=-29.9455, infea=1.04916e-14, dinf=1.38778e-17, avg_nnz_msg=11.7296, ever_nnz_msg=13.2222, uni_search=0.000111887, uni_subsolve=0.000179071, bi_search=0.000394541, bi_subsolve=0.000333143, maintain=0.000158613, construct=1.44569e-05
+, avg_act_size=1, uni_act_size=2.8, area1=18.6322, area23=12.1456, area4=0.137931, bi_act_size=6.05364, bi_ever_nnz_msg=5.19157, Acc=0
+
+uni_search=0.000111887, uni_subsolve=0.000179071, bi_search=0.000394541, bi_subsolve=0.000333143, maintain=0.000158613, construct=1.44569e-05
+Acc=0
+prediction time=0.00548177

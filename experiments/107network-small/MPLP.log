@@ -1,0 +1,13 @@
+Time limit = 1e+08
+Random seed = 0
+niter=10000000
+niter_later=20
+nclus_to_add=5
+obj_del_thr=0.0002
+int_gap_thr=0.0002
+Calling Init() code...
+Reading model file
+Initializing...
+Initially running MPLP for 10000000 iterations
+int val: 1711
+Iter=1 Objective=1711 Decoded=1711 ObjDel=1e+40 IntGap=6.13909e-12 Elapsed Time=53.8885

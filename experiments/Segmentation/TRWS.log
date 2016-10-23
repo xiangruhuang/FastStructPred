@@ -1,0 +1,9 @@
+TRWS  Tests ...
+loading .h5 file ../../../data//Segmentation/uai/16_16_s.21.uai.h5................done
+algorithm constructing...
+algorithm starting...
+best_value=-301.644, lower_bound=233.25, time=0.003403
+best_value=-263.101, lower_bound=248.847, time=0.003985
+best_value=-252.391, lower_bound=252.062, time=0.004564
+best_value=-252.391, lower_bound=252.391, time=0.005124
+best_value=-252.391, lower_bound=252.391, time=0.005688

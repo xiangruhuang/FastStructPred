@@ -1,0 +1,17 @@
+reading uai file ../../../data//test.loguai2.h5.uai
+done reading uai file
+normalizing #tables=210
+prob.avg_domain_size=20
+prob.N=1
+param.rho=1
+param.eta=0
+LPpredict: eta=1
+@0: T=20, n=76400, nf=0, m=0, me=7620
+iter=0, #inner=1, relaxed-p-obj=7757.032, decoded_t=182.1161, best_decoded=182.1161, eta=1, p_inf=11, d_inf=19, gap=0.98, nnz=14382(0.22), time=0.054
+iter=5, #inner=40, relaxed-p-obj=425.5819, decoded_t=125.6774, best_decoded=182.1161, eta=1, p_inf=0.15, d_inf=0.0063, gap=0.047, nnz=451(0.025), time=0.09
+iter=10, #inner=39, relaxed-p-obj=444.7719, decoded_t=53.44004, best_decoded=182.1161, eta=1, p_inf=0.098, d_inf=2.1e-06, gap=0.00082, nnz=474(0.025), time=0.13
+iter=15, #inner=40, relaxed-p-obj=445.0276, decoded_t=238.4792, best_decoded=238.4792, eta=1, p_inf=4.2e-05, d_inf=7.9e-07, gap=4.2e-05, nnz=421(0.024), time=0.17
+iter=20, #inner=41, relaxed-p-obj=445.0087, decoded_t=238.0643, best_decoded=238.4792, eta=1, p_inf=5e-10, d_inf=1.4e-15, gap=5.8e-10, nnz=420(0.024), time=0.21
+, acc=0
+Acc=0
+prediction time=0.21

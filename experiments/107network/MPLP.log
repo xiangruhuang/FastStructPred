@@ -1,0 +1,31 @@
+Time limit = 1e+08
+Random seed = 0
+niter=10000000
+niter_later=20
+nclus_to_add=5
+obj_del_thr=0.0002
+int_gap_thr=0.0002
+Calling Init() code...
+Reading model file
+Initializing...
+Initially running MPLP for 10000000 iterations
+Iter=1 Objective=3733 Decoded=-1e+40 ObjDel=1e+40 IntGap=1e+40 Elapsed Time=122.814
+Iter=2 Objective=3733 Decoded=-1e+40 ObjDel=-1.81899e-12 IntGap=1e+40 Elapsed Time=168.448
+int val: 3730
+Iter=3 Objective=3733 Decoded=3730 ObjDel=-1.81899e-12 IntGap=3 Elapsed Time=212.587
+Iter=4 Objective=3733 Decoded=3730 ObjDel=2.72848e-12 IntGap=3 Elapsed Time=257.191
+Iter=5 Objective=3733 Decoded=3730 ObjDel=-3.63798e-12 IntGap=3 Elapsed Time=302.09
+Iter=6 Objective=3733 Decoded=3730 ObjDel=4.54747e-13 IntGap=3 Elapsed Time=346.672
+Iter=7 Objective=3733 Decoded=3730 ObjDel=1.36424e-12 IntGap=3 Elapsed Time=390.844
+Iter=8 Objective=3733 Decoded=3730 ObjDel=1.36424e-12 IntGap=3 Elapsed Time=435.488
+Iter=9 Objective=3733 Decoded=3730 ObjDel=-4.54747e-13 IntGap=3 Elapsed Time=480.37
+Iter=10 Objective=3733 Decoded=3730 ObjDel=4.54747e-13 IntGap=3 Elapsed Time=525.15
+Iter=11 Objective=3733 Decoded=3730 ObjDel=-2.72848e-12 IntGap=3 Elapsed Time=571.668
+Iter=12 Objective=3733 Decoded=3730 ObjDel=1.81899e-12 IntGap=3 Elapsed Time=616.273
+Iter=13 Objective=3733 Decoded=3730 ObjDel=1.36424e-12 IntGap=3 Elapsed Time=661.078
+Iter=14 Objective=3733 Decoded=3730 ObjDel=4.54747e-13 IntGap=3 Elapsed Time=705.634
+Iter=15 Objective=3733 Decoded=3730 ObjDel=-1.81899e-12 IntGap=3 Elapsed Time=749.823
+Iter=16 Objective=3733 Decoded=3730 ObjDel=2.72848e-12 IntGap=3 Elapsed Time=794.499
+Iter=17 Objective=3733 Decoded=3730 ObjDel=4.54747e-13 IntGap=3 Elapsed Time=839.35
+Iter=18 Objective=3733 Decoded=3730 ObjDel=-4.09273e-12 IntGap=3 Elapsed Time=883.937
+break1

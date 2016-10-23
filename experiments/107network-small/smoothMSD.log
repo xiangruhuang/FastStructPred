@@ -1,0 +1,55 @@
+reading loguai file ../../../data//107network.loguai2
+#factors=731
+reading function tables.done reading loguai file
+normalizing #tables=86
+done normalizing
+prob.N=1
+param.gamma=0.0001
+iter=0, primal_obj=1678.27, best_primal_obj=1678.27, dual_obj=1711, relaxed_primal=1711.71, relaxed_dual=1711.71, grad_l2=6.48212, infea_inf(ratio=max/min)=e^(120.71), int_gap=651.654, pow_l1=inf, time=53.5737
+iter=1, primal_obj=1695.33, best_primal_obj=1695.33, dual_obj=1711.01, relaxed_primal=1711.01, relaxed_dual=1711.02, grad_l2=1.2984, infea_inf(ratio=max/min)=e^(63.4768), int_gap=68.462, pow_l1=inf, time=104.292
+iter=2, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.02, relaxed_primal=1711.01, relaxed_dual=1711.03, grad_l2=0.886888, infea_inf(ratio=max/min)=e^(119.99), int_gap=53.1327, pow_l1=inf, time=153.227
+iter=3, primal_obj=1697, best_primal_obj=1711, dual_obj=1711.28, relaxed_primal=1711, relaxed_dual=1711.28, grad_l2=0.491024, infea_inf(ratio=max/min)=e^(120.896), int_gap=73.2654, pow_l1=inf, time=203.655
+iter=4, primal_obj=1709, best_primal_obj=1711, dual_obj=1711.21, relaxed_primal=1711, relaxed_dual=1711.21, grad_l2=0.750569, infea_inf(ratio=max/min)=e^(120.653), int_gap=57.0117, pow_l1=inf, time=253.148
+iter=5, primal_obj=1700, best_primal_obj=1711, dual_obj=1711.15, relaxed_primal=1711, relaxed_dual=1711.16, grad_l2=0.566161, infea_inf(ratio=max/min)=e^(120.077), int_gap=64.4334, pow_l1=inf, time=302.509
+iter=6, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.17, relaxed_primal=1711, relaxed_dual=1711.17, grad_l2=0.702279, infea_inf(ratio=max/min)=e^(120), int_gap=49.9996, pow_l1=inf, time=352.442
+iter=7, primal_obj=1705, best_primal_obj=1711, dual_obj=1711.1, relaxed_primal=1711, relaxed_dual=1711.11, grad_l2=0.559939, infea_inf(ratio=max/min)=e^(120), int_gap=50.3421, pow_l1=inf, time=402.244
+iter=8, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.12, relaxed_primal=1711, relaxed_dual=1711.12, grad_l2=0.631961, infea_inf(ratio=max/min)=e^(120), int_gap=38.1746, pow_l1=inf, time=451.772
+iter=9, primal_obj=1707, best_primal_obj=1711, dual_obj=1711.12, relaxed_primal=1711, relaxed_dual=1711.12, grad_l2=0.483923, infea_inf(ratio=max/min)=e^(120), int_gap=42.3421, pow_l1=inf, time=501.774
+iter=10, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.08, relaxed_primal=1711, relaxed_dual=1711.09, grad_l2=0.650888, infea_inf(ratio=max/min)=e^(120), int_gap=40.354, pow_l1=inf, time=553.986
+iter=11, primal_obj=1709, best_primal_obj=1711, dual_obj=1711.09, relaxed_primal=1711, relaxed_dual=1711.09, grad_l2=0.447342, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=604.52
+iter=12, primal_obj=1709, best_primal_obj=1711, dual_obj=1711.06, relaxed_primal=1711, relaxed_dual=1711.06, grad_l2=0.623456, infea_inf(ratio=max/min)=e^(120), int_gap=41.4705, pow_l1=inf, time=655.074
+iter=13, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.12, relaxed_primal=1711, relaxed_dual=1711.12, grad_l2=0.563301, infea_inf(ratio=max/min)=e^(120), int_gap=38.3647, pow_l1=inf, time=705.803
+iter=14, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.06, relaxed_primal=1711, relaxed_dual=1711.06, grad_l2=0.572332, infea_inf(ratio=max/min)=e^(120), int_gap=28.1817, pow_l1=inf, time=756.623
+iter=15, primal_obj=1707, best_primal_obj=1711, dual_obj=1711.08, relaxed_primal=1711, relaxed_dual=1711.08, grad_l2=0.437821, infea_inf(ratio=max/min)=e^(120), int_gap=42.3422, pow_l1=inf, time=807.337
+iter=16, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.637441, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=858.121
+iter=17, primal_obj=1708, best_primal_obj=1711, dual_obj=1711.1, relaxed_primal=1711, relaxed_dual=1711.1, grad_l2=0.42801, infea_inf(ratio=max/min)=e^(120), int_gap=42.3421, pow_l1=inf, time=908.386
+iter=18, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.598001, infea_inf(ratio=max/min)=e^(120), int_gap=28.1661, pow_l1=inf, time=958.306
+iter=19, primal_obj=1708, best_primal_obj=1711, dual_obj=1711.09, relaxed_primal=1711, relaxed_dual=1711.09, grad_l2=0.428297, infea_inf(ratio=max/min)=e^(120), int_gap=42.3421, pow_l1=inf, time=1008.18
+iter=20, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.06, relaxed_primal=1711, relaxed_dual=1711.06, grad_l2=0.58362, infea_inf(ratio=max/min)=e^(120), int_gap=28.216, pow_l1=inf, time=1057.33
+iter=21, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.08, relaxed_primal=1711, relaxed_dual=1711.08, grad_l2=0.431123, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1106.8
+iter=22, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.592716, infea_inf(ratio=max/min)=e^(120), int_gap=28.1895, pow_l1=inf, time=1156.25
+iter=23, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.08, relaxed_primal=1711, relaxed_dual=1711.08, grad_l2=0.427461, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1208.66
+iter=24, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.595423, infea_inf(ratio=max/min)=e^(120), int_gap=28.2163, pow_l1=inf, time=1272.71
+iter=25, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.07, relaxed_primal=1711, relaxed_dual=1711.07, grad_l2=0.427642, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1328.88
+iter=26, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.592816, infea_inf(ratio=max/min)=e^(120), int_gap=28.1862, pow_l1=inf, time=1378.3
+iter=27, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.06, relaxed_primal=1711, relaxed_dual=1711.06, grad_l2=0.427741, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1429.02
+iter=28, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.596509, infea_inf(ratio=max/min)=e^(120), int_gap=28.2163, pow_l1=inf, time=1482.71
+iter=29, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.42737, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1555.26
+iter=30, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.592915, infea_inf(ratio=max/min)=e^(120), int_gap=28.1858, pow_l1=inf, time=1606.79
+iter=31, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.427368, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1658.22
+iter=32, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.596423, infea_inf(ratio=max/min)=e^(120), int_gap=28.2163, pow_l1=inf, time=1709.58
+iter=33, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.03, relaxed_primal=1711, relaxed_dual=1711.04, grad_l2=0.427488, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1761.08
+iter=34, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.592854, infea_inf(ratio=max/min)=e^(120), int_gap=28.1858, pow_l1=inf, time=1812.7
+iter=35, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.03, relaxed_primal=1711, relaxed_dual=1711.03, grad_l2=0.427387, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1864
+iter=36, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.596476, infea_inf(ratio=max/min)=e^(120), int_gap=28.2163, pow_l1=inf, time=1915.8
+iter=37, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.02, relaxed_primal=1711, relaxed_dual=1711.02, grad_l2=0.427405, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=1968.2
+iter=38, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.592963, infea_inf(ratio=max/min)=e^(120), int_gap=28.1858, pow_l1=inf, time=2020.26
+iter=39, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.01, relaxed_primal=1711, relaxed_dual=1711.02, grad_l2=0.427467, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=2072.73
+iter=40, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.05, relaxed_primal=1711, relaxed_dual=1711.05, grad_l2=0.59653, infea_inf(ratio=max/min)=e^(120), int_gap=28.2163, pow_l1=inf, time=2124.65
+iter=41, primal_obj=1710, best_primal_obj=1711, dual_obj=1711, relaxed_primal=1711, relaxed_dual=1711, grad_l2=0.426358, infea_inf(ratio=max/min)=e^(72), int_gap=28.3421, pow_l1=inf, time=2176.37
+iter=42, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.01, relaxed_primal=1711, relaxed_dual=1711.01, grad_l2=0.418184, infea_inf(ratio=max/min)=e^(113.059), int_gap=28.3421, pow_l1=inf, time=2228.07
+iter=43, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.01, relaxed_primal=1711, relaxed_dual=1711.01, grad_l2=0.587199, infea_inf(ratio=max/min)=e^(119.992), int_gap=26.1586, pow_l1=inf, time=2280.24
+iter=44, primal_obj=1710, best_primal_obj=1711, dual_obj=1711, relaxed_primal=1711, relaxed_dual=1711, grad_l2=0.408019, infea_inf(ratio=max/min)=e^(75.6087), int_gap=28.3442, pow_l1=inf, time=2331.93
+iter=45, primal_obj=1710, best_primal_obj=1711, dual_obj=1711.02, relaxed_primal=1711, relaxed_dual=1711.02, grad_l2=0.407995, infea_inf(ratio=max/min)=e^(120), int_gap=28.3421, pow_l1=inf, time=2383.38
+iter=46, primal_obj=1711, best_primal_obj=1711, dual_obj=1711.04, relaxed_primal=1711, relaxed_dual=1711.04, grad_l2=0.579545, infea_inf(ratio=max/min)=e^(120), int_gap=26.3427, pow_l1=inf, time=2436.05
+iter=47, primal_obj=1711, best_primal_obj=1711, dual_obj=1711, relaxed_primal=1711, relaxed_dual=1711, grad_l2=0.415367, infea_inf(ratio=max/min)=e^(98.4914), int_gap=4.34211, pow_l1=inf, time=2488.19

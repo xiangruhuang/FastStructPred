@@ -1,0 +1,37 @@
+Time limit = 1e+08
+Random seed = 0
+niter=10000000
+niter_later=20
+nclus_to_add=5
+obj_del_thr=0.0002
+int_gap_thr=0.0002
+Calling Init() code...
+Reading model file
+Initializing...
+Initially running MPLP for 10000000 iterations
+int val: -457.798
+Iter=1 Objective=-198.156 Decoded=-457.798 ObjDel=1e+40 IntGap=259.642 Elapsed Time=0.013069
+int val: -379.879
+Iter=2 Objective=-228.44 Decoded=-379.879 ObjDel=30.2836 IntGap=151.44 Elapsed Time=0.021175
+int val: -309.583
+Iter=3 Objective=-240.521 Decoded=-309.583 ObjDel=12.0812 IntGap=69.0623 Elapsed Time=0.02909
+int val: -289.395
+Iter=4 Objective=-245.26 Decoded=-289.395 ObjDel=4.73907 IntGap=44.1345 Elapsed Time=0.03666
+int val: -264.793
+Iter=5 Objective=-247.835 Decoded=-264.793 ObjDel=2.57469 IntGap=16.9581 Elapsed Time=0.044615
+int val: -253.758
+Iter=6 Objective=-249.51 Decoded=-253.758 ObjDel=1.67493 IntGap=4.24792 Elapsed Time=0.052335
+int val: -252.668
+Iter=7 Objective=-250.668 Decoded=-252.668 ObjDel=1.15796 IntGap=2.0005 Elapsed Time=0.05991
+Iter=8 Objective=-251.393 Decoded=-252.668 ObjDel=0.725365 IntGap=1.27514 Elapsed Time=0.067357
+Iter=9 Objective=-251.743 Decoded=-252.668 ObjDel=0.350369 IntGap=0.92477 Elapsed Time=0.075226
+Iter=10 Objective=-252.018 Decoded=-252.668 ObjDel=0.274358 IntGap=0.650412 Elapsed Time=0.082858
+Iter=11 Objective=-252.17 Decoded=-252.668 ObjDel=0.1527 IntGap=0.497712 Elapsed Time=0.090489
+Iter=12 Objective=-252.231 Decoded=-252.668 ObjDel=0.0610228 IntGap=0.436689 Elapsed Time=0.098221
+Iter=13 Objective=-252.289 Decoded=-252.668 ObjDel=0.0580229 IntGap=0.378666 Elapsed Time=0.105904
+Iter=14 Objective=-252.331 Decoded=-252.668 ObjDel=0.0418084 IntGap=0.336858 Elapsed Time=0.113566
+int val: -252.391
+Iter=15 Objective=-252.355 Decoded=-252.391 ObjDel=0.0238746 IntGap=0.0362594 Elapsed Time=0.121315
+Iter=16 Objective=-252.376 Decoded=-252.391 ObjDel=0.0213206 IntGap=0.0149389 Elapsed Time=0.12916
+Iter=17 Objective=-252.389 Decoded=-252.391 ObjDel=0.0127476 IntGap=0.00219124 Elapsed Time=0.13672
+Iter=18 Objective=-252.391 Decoded=-252.391 ObjDel=0.00219124 IntGap=-1.42109e-13 Elapsed Time=0.144373
